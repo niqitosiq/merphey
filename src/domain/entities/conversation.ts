@@ -1,27 +1,93 @@
+import { PsychologistAnalysis } from '../services/psychologist.service';
+
 // Define conversation step type
 export enum ConversationStepType {
   INITIAL_ANALYSIS = 'initial_analysis',
-  QUESTION_GENERATION = 'question_generation',
   CONVERSATION_PLAN = 'conversation_plan',
   QUESTION_EXPLORATION = 'question_exploration',
   FINAL_ANALYSIS = 'final_analysis',
+  HOMEWORK_GENERATION = 'homework_generation',
+  STORY_GENERATION = 'story_generation',
 }
 
 export interface ConversationContext {
   initialProblem?: string;
-  analyzedProblem?: string;
-  questionsAndAnswers?: Array<{ question: string; answer: string }>;
-  conversationPlan?: ConversationPlan;
-  currentQuestion?: QuestionNode;
-  previousAnswers?: Record<string, string>;
+  currentQuestion?: {
+    text: string;
+    id: string;
+  };
   conversationHistory?: Array<{ role: string; content: string }>;
-  currentQuestionExchanges?: number;
-  questionProgress?: Record<string, QuestionExplorationProgress>;
+  psychologistAnalysis?: PsychologistAnalysis;
 }
 
-export interface ConversationPlan {
-  mainTopics: QuestionNode[];
-  recommendedDepth: number;
+export interface ConversationMessage {
+  role: 'system' | 'user' | 'assistant';
+  content: string;
+}
+
+export enum CommunicatorTag {
+  NEED_GUIDANCE = 'NEED_GUIDANCE',
+  DEEP_EMOTION = 'DEEP_EMOTION',
+  RESISTANCE = 'RESISTANCE',
+  CRISIS = 'CRISIS',
+  TOPIC_CHANGE = 'TOPIC_CHANGE',
+}
+
+export enum PsychologistTag {
+  CONTINUE = 'CONTINUE',
+  ADJUST_APPROACH = 'ADJUST_APPROACH',
+  EXPLORE_DEEPER = 'EXPLORE_DEEPER',
+  WRAP_UP = 'WRAP_UP',
+  CRISIS_PROTOCOL = 'CRISIS_PROTOCOL',
+  SESSION_COMPLETE = 'SESSION_COMPLETE',
+}
+
+export enum SessionTag {
+  SCHEDULE_FOLLOWUP = 'SCHEDULE_FOLLOWUP',
+  URGENT_FOLLOWUP = 'URGENT_FOLLOWUP',
+  REFER_SPECIALIST = 'REFER_SPECIALIST',
+  MAINTENANCE_MODE = 'MAINTENANCE_MODE',
+}
+
+export enum HomeworkTag {
+  REFLECTION = 'REFLECTION',
+  BEHAVIORAL = 'BEHAVIORAL',
+  COGNITIVE = 'COGNITIVE',
+  EMOTIONAL = 'EMOTIONAL',
+}
+
+export enum StoryTag {
+  INSIGHT = 'INSIGHT',
+  HOPE = 'HOPE',
+  COPING = 'COPING',
+  GROWTH = 'GROWTH',
+}
+
+export interface PsychologistResponse {
+  analysis: {
+    analysis: string;
+    suggestedAction: 'ask' | 'tell' | 'finalize' | 'seek_guidance';
+    shouldFinalize: boolean;
+    nextSteps: string[];
+    warningSignals: string[];
+    therapeuticGoals: string[];
+    tags: PsychologistTag[];
+    recommendedApproach: string;
+  };
+  role: 'psychologist';
+}
+
+export interface CommunicatorResponse {
+  response: string;
+  tags?: CommunicatorTag[];
+  role: 'communicator';
+}
+
+export interface TherapyRecommendations {
+  clinicalAnalysis: string;
+  friendlyAnalysis: string;
+  homework?: string;
+  story?: string;
 }
 
 export interface QuestionNode {
@@ -32,10 +98,11 @@ export interface QuestionNode {
   parentId?: string;
 }
 
-export interface QuestionExplorationResult {
-  response: string;
-  isComplete: boolean;
-  completionReason?: string;
+export interface ConversationPlan {
+  mainTopics: QuestionNode[];
+  recommendedDepth: number;
+  warningSignals?: string[];
+  completionCriteria?: string[];
 }
 
 export interface QuestionExplorationProgress {
@@ -43,16 +110,4 @@ export interface QuestionExplorationProgress {
   isComplete: boolean;
   completionReason?: string;
   currentExchanges: number;
-}
-
-export interface BatchExplorationResult {
-  response: string;
-  questionsProgress: Record<string, QuestionExplorationProgress>;
-  suggestedNextQuestions: QuestionNode[];
-  shouldContinue: boolean;
-}
-
-export interface ConversationMessage {
-  role: 'system' | 'user' | 'assistant';
-  content: string;
 }

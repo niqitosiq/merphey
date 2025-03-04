@@ -1,27 +1,44 @@
 import { Telegraf } from 'telegraf';
-import { ConversationService } from '../../domain/services/conversation.service';
 import { config } from '../config';
-import { LLMErrorHandler } from '../../utils/llm-error-handler';
+import { CommunicatorService } from '../../domain/services/communicator.service';
+import { Logger } from '../../utils/logger';
+import { ErrorBoundary } from '../../utils/error-boundary';
+import { UserSessionRepository } from '../../domain/repositories/user-session.repository';
 
 export class TelegramBotService {
   private bot: Telegraf;
+  private readonly logger = Logger.getInstance();
+  private readonly sessionRepository: UserSessionRepository;
 
-  constructor(private readonly conversationService: ConversationService) {
+  constructor(
+    private readonly communicator: CommunicatorService,
+    sessionRepository: UserSessionRepository,
+  ) {
     this.bot = new Telegraf(config.telegram.botToken);
+    this.sessionRepository = sessionRepository;
     this.setupHandlers();
   }
 
   private setupHandlers(): void {
     // Start command handler
     this.bot.command('start', async (ctx) => {
-      await ctx.reply(
-        'Здравствуйте! Я психолог-консультант. Расскажите, что вас беспокоит, и я постараюсь помочь.',
-      );
+      const userId = ctx.from.id.toString();
+      const greeting = await ErrorBoundary.wrap(() => this.communicator.startConversation(userId), {
+        userId,
+        step: 'start_conversation',
+      });
+      this.sessionRepository.create({ userId });
+      await ctx.reply(greeting);
     });
 
     // Reset conversation command
     this.bot.command('reset', async (ctx) => {
-      await ctx.reply('Начнем сначала. Расскажите, что вас беспокоит.');
+      const userId = ctx.from.id.toString();
+      const greeting = await ErrorBoundary.wrap(() => this.communicator.startConversation(userId), {
+        userId,
+        step: 'reset_conversation',
+      });
+      await ctx.reply(greeting);
     });
 
     // Help command
@@ -42,53 +59,38 @@ export class TelegramBotService {
       try {
         await ctx.sendChatAction('typing');
 
-        // Handle user message
-        const result = await LLMErrorHandler.withErrorHandling(async () => {
-          try {
-            // Try to process as a response to ongoing conversation
-            return await this.conversationService.processUserResponse(userId, message);
-          } catch (error: any) {
-            if (error.message === 'No active session found') {
-              // If no active session, start a new conversation
-              await this.conversationService.startConversation(userId, message);
-              return await this.conversationService.processUserResponse(userId, message);
-            }
-            throw error;
-          }
-        });
+        // Everything goes through the communicator
+        const response = await ErrorBoundary.wrap(
+          () => this.communicator.handleUserMessage(userId, message),
+          { userId, step: 'handle_message' },
+        );
 
-        await ctx.reply(result.response);
+        // Send all responses
+        for (const reply of response.messages) {
+          await ctx.reply(reply);
+        }
 
-        if (result.isComplete) {
-          await ctx.reply(
-            'Наша беседа подошла к концу. Если у вас есть другие вопросы или темы для обсуждения, просто напишите их, и мы начнем новую беседу.',
-          );
+        // If session should end, send a final message after a delay
+        if (response.shouldEndSession) {
+          await new Promise((resolve) => setTimeout(resolve, 2000));
+          await ctx.reply('💫 Вы можете начать новую беседу с помощью команды /start');
         }
       } catch (error: any) {
-        console.error('Error processing message:', error);
-
-        if (error.code === 'RATE_LIMIT_EXCEEDED') {
-          await ctx.reply(
-            'Извините, в данный момент слишком много запросов. Пожалуйста, подождите немного и попробуйте снова.',
-          );
-        } else {
-          await ctx.reply(
-            'Извините, произошла ошибка при обработке вашего сообщения. Пожалуйста, попробуйте позже или начните новую беседу с помощью команды /reset',
-          );
-        }
+        this.logger.error('Error processing message:', error);
+        await ctx.reply(
+          'Извините, произошла ошибка. Пожалуйста, попробуйте позже или начните новую беседу с помощью команды /reset',
+        );
       }
     });
   }
 
   async start(): Promise<void> {
     if (config.environment === 'production' && config.telegram.webhookUrl) {
-      // Set up webhook for production
       await this.bot.telegram.setWebhook(config.telegram.webhookUrl);
-      console.log('Bot started with webhook');
+      this.logger.info('Bot started with webhook');
     } else {
-      // Use long polling for development
       await this.bot.launch();
-      console.log('Bot started with long polling');
+      this.logger.info('Bot started with long polling');
     }
   }
 

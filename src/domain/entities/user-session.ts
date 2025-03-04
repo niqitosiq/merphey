@@ -17,14 +17,11 @@ export interface QuestionAnswer {
 export interface UserSession {
   id: string;
   userId: string;
-  initialProblem?: string;
-  analyzedProblem?: string;
-  conversationPlan?: ConversationPlan;
-  previousAnswers: Record<string, string>;
-  questionProgress: Record<string, QuestionExplorationProgress>;
   conversationHistory: Array<{ role: string; content: string }>;
-  currentQuestionId?: string;
-  currentQuestionExchanges: number;
+  currentQuestion?: {
+    text: string;
+    id: string;
+  };
   isComplete: boolean;
   lastInteractionAt: Date;
   createdAt: Date;
@@ -32,19 +29,14 @@ export interface UserSession {
 
 export interface CreateUserSessionParams {
   userId: string;
-  initialProblem?: string;
 }
 
 export class UserSessionFactory {
-  static create({ userId, initialProblem }: CreateUserSessionParams): UserSession {
+  static create({ userId }: CreateUserSessionParams): UserSession {
     return {
       id: Math.random().toString(36).substring(7),
       userId,
-      initialProblem,
-      previousAnswers: {},
-      questionProgress: {},
       conversationHistory: [],
-      currentQuestionExchanges: 0,
       isComplete: false,
       lastInteractionAt: new Date(),
       createdAt: new Date(),
@@ -185,7 +177,7 @@ export class UserSessionManager {
       // We've completed our main question, move to the next main question
       const mainTopics = this.conversationPlan.mainTopics;
       const lastCompletedIndex = mainTopics.findIndex(
-        (q) => this.previousAnswers[q.id] !== undefined,
+        (q: QuestionNode) => this.previousAnswers[q.id] !== undefined,
       );
 
       // If there's another main topic, move to it
@@ -207,7 +199,7 @@ export class UserSessionManager {
 
     // Find last answered subquestion
     const lastAnsweredIndex = parentQuestion.subQuestions.findIndex(
-      (q) => this.previousAnswers[q.id] !== undefined,
+      (q: QuestionNode) => this.previousAnswers[q.id] !== undefined,
     );
 
     // Move to next subquestion if available
@@ -224,7 +216,9 @@ export class UserSessionManager {
       return false;
     }
 
-    return question.subQuestions.some((q) => this.previousAnswers[q.id] !== undefined);
+    return question.subQuestions.some(
+      (q: QuestionNode) => this.previousAnswers[q.id] !== undefined,
+    );
   }
 
   setPoints(points: string[]): void {
@@ -248,15 +242,20 @@ export class UserSessionManager {
 
     // Check if all questions are complete
     if (this.conversationPlan) {
-      const allQuestions = this.conversationPlan.mainTopics.reduce((acc, topic) => {
-        acc.push(topic);
-        if (topic.subQuestions) {
-          acc.push(...topic.subQuestions);
-        }
-        return acc;
-      }, [] as QuestionNode[]);
+      const allQuestions = this.conversationPlan.mainTopics.reduce(
+        (acc: QuestionNode[], topic: QuestionNode) => {
+          acc.push(topic);
+          if (topic.subQuestions) {
+            acc.push(...topic.subQuestions);
+          }
+          return acc;
+        },
+        [],
+      );
 
-      const allComplete = allQuestions.every((q) => this.questionProgress[q.id]?.isComplete);
+      const allComplete = allQuestions.every(
+        (q: QuestionNode) => this.questionProgress[q.id]?.isComplete,
+      );
 
       if (allComplete) {
         this.conversationCompleted = true;

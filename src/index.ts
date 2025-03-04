@@ -1,10 +1,11 @@
 import { AzureOpenAIService } from './infrastructure/llm/azure-openai.service';
-import { ConversationService } from './domain/services/conversation.service';
 import { TelegramBotService } from './infrastructure/telegram/telegram-bot.service';
 import { UserSessionRepositoryImpl } from './domain/repositories/user-session.repository';
 import { Logger } from './utils/logger';
 import { MetricsService } from './utils/metrics';
 import { ErrorBoundary, ErrorSeverity, ApplicationError } from './utils/error-boundary';
+import { PsychologistService } from './domain/services/psychologist.service';
+import { CommunicatorService } from './domain/services/communicator.service';
 
 const logger = Logger.getInstance();
 const metrics = MetricsService.getInstance();
@@ -17,7 +18,6 @@ async function checkServices(): Promise<void> {
 
   for (const service of services) {
     try {
-      // Basic initialization check
       if (!service.instance) {
         throw new ApplicationError(
           `Failed to initialize ${service.name}`,
@@ -34,11 +34,10 @@ async function checkServices(): Promise<void> {
 }
 
 async function startMetricsCollection(): Promise<void> {
-  // Start collecting basic system metrics
   setInterval(() => {
     const usedHeap = process.memoryUsage().heapUsed / 1024 / 1024;
     metrics.recordMetric('memory_usage_mb', usedHeap);
-  }, 60000); // Every minute
+  }, 60000);
 }
 
 async function setupGracefulShutdown(botService: TelegramBotService): Promise<void> {
@@ -46,18 +45,15 @@ async function setupGracefulShutdown(botService: TelegramBotService): Promise<vo
     logger.info(`Received ${signal}, starting graceful shutdown...`);
 
     try {
-      // Stop the bot first
       await botService.stop();
       logger.info('Bot service stopped successfully');
 
-      // Log final metrics
       const errorSummary = ErrorBoundary.getErrorSummary();
       logger.info('Final error summary', errorSummary);
 
       const metricsSummary = metrics.getSummary();
       logger.info('Final metrics summary', metricsSummary);
 
-      // Exit gracefully
       process.exit(0);
     } catch (error) {
       logger.error('Error during shutdown', { error });
@@ -68,7 +64,6 @@ async function setupGracefulShutdown(botService: TelegramBotService): Promise<vo
   process.on('SIGTERM', () => shutdown('SIGTERM'));
   process.on('SIGINT', () => shutdown('SIGINT'));
 
-  // Handle uncaught errors
   process.on('uncaughtException', (error) => {
     logger.error('Uncaught exception', { error });
     shutdown('uncaughtException');
@@ -88,11 +83,16 @@ async function bootstrap() {
     // Check all required services
     await checkServices();
 
-    // Initialize services
+    // Initialize base services
     const sessionRepository = new UserSessionRepositoryImpl();
     const llmService = new AzureOpenAIService();
-    const conversationService = new ConversationService(llmService, sessionRepository);
-    const botService = new TelegramBotService(conversationService);
+
+    // Initialize domain services with dependencies
+    const psychologistService = new PsychologistService(llmService, sessionRepository);
+    const communicatorService = new CommunicatorService(psychologistService, llmService);
+
+    // Initialize bot service with communicator
+    const botService = new TelegramBotService(communicatorService, sessionRepository);
 
     // Start metrics collection
     await startMetricsCollection();
