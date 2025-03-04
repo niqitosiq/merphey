@@ -19,11 +19,6 @@ export interface Config {
       finalAnalysis: string;
     };
   };
-  prompts: {
-    initialPrompt: string;
-    questionGenerationPrompt: string;
-    finalAnalysisPrompt: string;
-  };
 }
 
 // Function to validate required environment variables
@@ -44,9 +39,6 @@ const requiredEnvVars = [
   'INITIAL_PROMPT_DEPLOYMENT',
   'QUESTION_GENERATION_DEPLOYMENT',
   'FINAL_ANALYSIS_DEPLOYMENT',
-  'INITIAL_PROMPT',
-  'QUESTION_GENERATION_PROMPT',
-  'FINAL_ANALYSIS_PROMPT',
 ];
 
 // Validate required environment variables
@@ -66,10 +58,5 @@ export const config: Config = {
       questionGeneration: process.env.QUESTION_GENERATION_DEPLOYMENT!,
       finalAnalysis: process.env.FINAL_ANALYSIS_DEPLOYMENT!,
     },
-  },
-  prompts: {
-    initialPrompt: process.env.INITIAL_PROMPT!,
-    questionGenerationPrompt: process.env.QUESTION_GENERATION_PROMPT!,
-    finalAnalysisPrompt: process.env.FINAL_ANALYSIS_PROMPT!,
   },
 };
