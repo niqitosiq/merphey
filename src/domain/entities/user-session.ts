@@ -1,8 +1,4 @@
-import {
-  ConversationPlan,
-  QuestionNode,
-  QuestionExplorationProgress,
-} from '../../infrastructure/llm/azure-openai.service';
+import { ConversationPlan, QuestionExplorationProgress, QuestionNode } from './conversation';
 
 export enum ConversationState {
   IDLE = 'idle',
@@ -18,7 +14,45 @@ export interface QuestionAnswer {
   answer: string;
 }
 
-export class UserSession {
+export interface UserSession {
+  id: string;
+  userId: string;
+  initialProblem?: string;
+  analyzedProblem?: string;
+  conversationPlan?: ConversationPlan;
+  previousAnswers: Record<string, string>;
+  questionProgress: Record<string, QuestionExplorationProgress>;
+  conversationHistory: Array<{ role: string; content: string }>;
+  currentQuestionId?: string;
+  currentQuestionExchanges: number;
+  isComplete: boolean;
+  lastInteractionAt: Date;
+  createdAt: Date;
+}
+
+export interface CreateUserSessionParams {
+  userId: string;
+  initialProblem?: string;
+}
+
+export class UserSessionFactory {
+  static create({ userId, initialProblem }: CreateUserSessionParams): UserSession {
+    return {
+      id: Math.random().toString(36).substring(7),
+      userId,
+      initialProblem,
+      previousAnswers: {},
+      questionProgress: {},
+      conversationHistory: [],
+      currentQuestionExchanges: 0,
+      isComplete: false,
+      lastInteractionAt: new Date(),
+      createdAt: new Date(),
+    };
+  }
+}
+
+export class UserSessionManager {
   userId: string;
   state: ConversationState;
   problemStatement: string;

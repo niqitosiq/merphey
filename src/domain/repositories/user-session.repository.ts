@@ -1,7 +1,16 @@
 import NodeCache from 'node-cache';
-import { UserSession } from '../entities/user-session';
+import { UserSession, CreateUserSessionParams, UserSessionFactory } from '../entities/user-session';
 
-export class UserSessionRepository {
+export interface UserSessionRepository {
+  create(params: CreateUserSessionParams): Promise<UserSession>;
+  findById(id: string): Promise<UserSession | null>;
+  findByUserId(userId: string): Promise<UserSession | null>;
+  update(session: UserSession): Promise<UserSession>;
+  delete(id: string): Promise<void>;
+  findActiveByUserId(userId: string): Promise<UserSession | null>;
+}
+
+export class UserSessionRepositoryImpl implements UserSessionRepository {
   private cache: NodeCache;
 
   constructor() {
@@ -9,38 +18,36 @@ export class UserSessionRepository {
     this.cache = new NodeCache({ stdTTL: 3600 });
   }
 
-  /**
-   * Get user session by ID or create a new one if it doesn't exist
-   */
-  getOrCreateSession(userId: string): UserSession {
-    const existingSession = this.cache.get<UserSession>(userId);
-    if (existingSession) {
-      return existingSession;
+  async create(params: CreateUserSessionParams): Promise<UserSession> {
+    const session = UserSessionFactory.create(params);
+    this.cache.set(session.id, session);
+    return session;
+  }
+
+  async findById(id: string): Promise<UserSession | null> {
+    return this.cache.get<UserSession>(id) || null;
+  }
+
+  async findByUserId(userId: string): Promise<UserSession | null> {
+    const sessions = this.cache.mget<UserSession>(this.cache.keys());
+    return Object.values(sessions).find(session => session.userId === userId) || null;
+  }
+
+  async update(session: UserSession): Promise<UserSession> {
+    session.lastInteractionAt = new Date();
+    this.cache.set(session.id, session);
+    return session;
+  }
+
+  async delete(id: string): Promise<void> {
+    this.cache.del(id);
+  }
+
+  async findActiveByUserId(userId: string): Promise<UserSession | null> {
+    const session = await this.findByUserId(userId);
+    if (session && !session.isComplete) {
+      return session;
     }
-
-    const newSession = new UserSession(userId);
-    this.saveSession(newSession);
-    return newSession;
-  }
-
-  /**
-   * Save user session to cache
-   */
-  saveSession(session: UserSession): void {
-    this.cache.set(session.userId, session);
-  }
-
-  /**
-   * Delete user session from cache
-   */
-  deleteSession(userId: string): void {
-    this.cache.del(userId);
-  }
-
-  /**
-   * Clear all sessions from cache
-   */
-  clearAllSessions(): void {
-    this.cache.flushAll();
+    return null;
   }
 }
