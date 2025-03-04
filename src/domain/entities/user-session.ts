@@ -20,6 +20,7 @@ export class UserSession {
   questions: string[];
   questionsAndAnswers: QuestionAnswer[];
   finalAnalysis: string;
+  points: string[];
 
   constructor(userId: string) {
     this.userId = userId;
@@ -30,6 +31,7 @@ export class UserSession {
     this.questions = [];
     this.questionsAndAnswers = [];
     this.finalAnalysis = '';
+    this.points = [];
   }
 
   setProblemStatement(problem: string): void {
@@ -39,6 +41,14 @@ export class UserSession {
 
   setAnalyzedProblem(analyzed: string): void {
     this.analyzedProblem = analyzed;
+  }
+
+  setPoints(points: string[]): void {
+    this.points = points;
+  }
+
+  getPoints(): string {
+    return this.points.join('\n');
   }
 
   setQuestions(questions: string[]): void {

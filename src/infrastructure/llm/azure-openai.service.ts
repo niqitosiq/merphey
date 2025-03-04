@@ -40,7 +40,7 @@ export class AzureOpenAIService {
    * @param analyzedProblem - The processed problem from the first step
    * @returns List of questions and points to ask the user
    */
-  async generateQuestions(analyzedProblem: string): Promise<string[]> {
+  async generateQuestions(analyzedProblem: string) {
     const deployment = config.azureOpenAI.deployments.questionGeneration;
     const prompt = config.prompts.questionGenerationPrompt;
 
@@ -55,11 +55,15 @@ export class AzureOpenAIService {
     const content = result.choices[0]?.message?.content || '';
 
     // Parse the content to extract questions (Q:) and points (P:)
-    const items = content
-      .split('\n')
-      .filter((line) => line.trim().startsWith('Q:') || line.trim().startsWith('P:'));
+    const items = content.split('\n').filter((line) => line.trim().startsWith('Q:'));
 
-    return items.map((item) => item.trim());
+    return {
+      questions: items.map((item) => item.trim()),
+      points: content
+        .split('\n')
+        .filter((line) => line.trim().startsWith('P:'))
+        .map((line) => line.trim()),
+    };
   }
 
   /**

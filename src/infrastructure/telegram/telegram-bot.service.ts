@@ -128,6 +128,8 @@ export class TelegramBotService {
       'Спасибо, что поделились. Я анализирую ваше сообщение, чтобы лучше понять, как помочь вам...',
     );
 
+    console.log('problem', problem);
+
     // Set the problem statement and update state
     session.setProblemStatement(problem);
     this.sessionRepository.saveSession(session);
@@ -138,8 +140,11 @@ export class TelegramBotService {
       session.setAnalyzedProblem(analyzedProblem);
 
       // Generate questions based on the analyzed problem
-      const questions = await this.azureOpenAIService.generateQuestions(analyzedProblem);
+      const { questions, points } = await this.azureOpenAIService.generateQuestions(
+        analyzedProblem,
+      );
       session.setQuestions(questions);
+      session.setPoints(points);
       this.sessionRepository.saveSession(session);
 
       // Send the first question to the user
@@ -187,7 +192,10 @@ export class TelegramBotService {
     if (nextQuestion) {
       // If there's another question, send it to the user
       await ctx.reply(nextQuestion);
+      console.log('Next question:', nextQuestion);
     } else {
+      await ctx.reply(session.getPoints());
+      console.log('Points:', session.getPoints());
       // If we've gone through all questions, generate the final analysis
       await ctx.reply(
         'Спасибо за ваши ответы. Сейчас я подготовлю тщательный анализ на основе нашего разговора...',
@@ -203,6 +211,7 @@ export class TelegramBotService {
         this.sessionRepository.saveSession(session);
 
         await ctx.reply(finalAnalysis);
+        console.log('Final Analysis:', finalAnalysis);
         await ctx.reply(
           'Надеюсь, этот анализ был полезен для вас. Если у вас есть другие вопросы или вы хотите обсудить что-то еще, ' +
             'вы можете начать новый разговор в любое время, просто написав сообщение или использовав команду /reset для очистки текущей сессии.',
