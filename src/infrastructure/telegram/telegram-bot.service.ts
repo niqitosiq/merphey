@@ -45,20 +45,20 @@ export class TelegramBotService {
       this.sessionRepository.saveSession(session);
 
       await ctx.reply(
-        'Welcome to the Psychology Help Bot! 👋\n\n' +
-          "I'm here to help you understand and work through psychological challenges. " +
-          "Please describe your problem or concern, and I'll guide you through a process to gain insights.",
+        'Добро пожаловать в бота психологической помощи! 👋\n\n' +
+          'Я здесь, чтобы помочь вам разобраться в психологических проблемах. ' +
+          'Пожалуйста, опишите вашу проблему или беспокойство, и я проведу вас через процесс, который поможет получить новое понимание ситуации.',
       );
     });
 
     // Help command to show available commands
     this.bot.command('help', async (ctx) => {
       await ctx.reply(
-        'Psychology Help Bot Commands:\n\n' +
-          '/start - Begin a new conversation\n' +
-          '/help - Show this help message\n' +
-          '/reset - Reset your current conversation\n\n' +
-          'Simply type your problem or concern to begin.',
+        'Команды бота психологической помощи:\n\n' +
+          '/start - Начать новый разговор\n' +
+          '/help - Показать это сообщение помощи\n' +
+          '/reset - Сбросить текущий разговор\n\n' +
+          'Просто опишите вашу проблему или беспокойство, чтобы начать.',
       );
     });
 
@@ -71,7 +71,7 @@ export class TelegramBotService {
       this.sessionRepository.saveSession(session);
 
       await ctx.reply(
-        "Your conversation has been reset. You can share a new concern whenever you're ready.",
+        'Ваш разговор был сброшен. Вы можете поделиться новой проблемой, когда будете готовы.',
       );
     });
   }
@@ -93,7 +93,9 @@ export class TelegramBotService {
           break;
 
         case ConversationState.PROCESSING_PROBLEM:
-          await ctx.reply("I'm still processing your previous message. Please wait a moment...");
+          await ctx.reply(
+            'Я все еще обрабатываю ваше предыдущее сообщение. Пожалуйста, подождите немного...',
+          );
           break;
 
         case ConversationState.ASKING_QUESTIONS:
@@ -102,13 +104,13 @@ export class TelegramBotService {
 
         case ConversationState.GENERATING_ANALYSIS:
           await ctx.reply(
-            "I'm generating an analysis based on your responses. Please wait a moment...",
+            'Я формирую анализ на основе ваших ответов. Пожалуйста, подождите немного...',
           );
           break;
 
         default:
           await ctx.reply(
-            'Something went wrong. Please try resetting the conversation with /reset command.',
+            'Что-то пошло не так. Пожалуйста, попробуйте сбросить разговор командой /reset.',
           );
       }
     });
@@ -123,7 +125,7 @@ export class TelegramBotService {
     problem: string,
   ): Promise<void> {
     await ctx.reply(
-      "Thank you for sharing. I'm analyzing your message to better understand how to help you...",
+      'Спасибо, что поделились. Я анализирую ваше сообщение, чтобы лучше понять, как помочь вам...',
     );
 
     // Set the problem statement and update state
@@ -144,13 +146,13 @@ export class TelegramBotService {
       const firstQuestion = session.getCurrentQuestion();
       if (firstQuestion) {
         await ctx.reply(
-          "Based on your message, I'd like to explore some aspects more deeply. " +
-            'Please respond to each question to help me understand better:\n\n' +
+          'На основе вашего сообщения я хотел бы глубже изучить некоторые аспекты. ' +
+            'Пожалуйста, ответьте на каждый вопрос, чтобы я мог лучше понять ситуацию:\n\n' +
             firstQuestion,
         );
       } else {
         await ctx.reply(
-          "I couldn't generate questions based on your input. Could you try explaining your situation again?",
+          'Мне не удалось сгенерировать вопросы на основе вашего описания. Не могли бы вы попробовать объяснить ситуацию иначе?',
         );
         session.reset();
         session.state = ConversationState.WAITING_FOR_PROBLEM;
@@ -159,7 +161,7 @@ export class TelegramBotService {
     } catch (error) {
       console.error('Error processing message:', error);
       await ctx.reply(
-        'I encountered an error while processing your message. Could you try again or reset the conversation with /reset?',
+        'Произошла ошибка при обработке вашего сообщения. Не могли бы вы попробовать еще раз или сбросить разговор командой /reset?',
       );
       session.reset();
       session.state = ConversationState.WAITING_FOR_PROBLEM;
@@ -188,7 +190,7 @@ export class TelegramBotService {
     } else {
       // If we've gone through all questions, generate the final analysis
       await ctx.reply(
-        "Thank you for your responses. I'm now preparing a thoughtful analysis based on our conversation...",
+        'Спасибо за ваши ответы. Сейчас я подготовлю тщательный анализ на основе нашего разговора...',
       );
 
       try {
@@ -202,13 +204,13 @@ export class TelegramBotService {
 
         await ctx.reply(finalAnalysis);
         await ctx.reply(
-          'I hope this guidance is helpful. If you have another concern or would like to discuss something else, ' +
-            'you can start a new conversation at any time by typing your message or using /reset to clear the current session.',
+          'Надеюсь, этот анализ был полезен для вас. Если у вас есть другие вопросы или вы хотите обсудить что-то еще, ' +
+            'вы можете начать новый разговор в любое время, просто написав сообщение или использовав команду /reset для очистки текущей сессии.',
         );
       } catch (error) {
         console.error('Error generating final analysis:', error);
         await ctx.reply(
-          'I encountered an error while generating your analysis. Could you try resetting the conversation with /reset?',
+          'Произошла ошибка при генерации анализа. Не могли бы вы попробовать сбросить разговор командой /reset?',
         );
         session.reset();
         this.sessionRepository.saveSession(session);
