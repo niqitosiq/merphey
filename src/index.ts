@@ -9,26 +9,6 @@ import { CommunicatorService } from './domain/services/communicator.service';
 const logger = Logger.getInstance();
 const metrics = MetricsService.getInstance();
 
-async function checkServices(): Promise<void> {
-  const services = [{ name: 'UserSessionRepository', instance: new UserSessionRepositoryImpl() }];
-
-  for (const service of services) {
-    try {
-      if (!service.instance) {
-        throw new ApplicationError(
-          `Failed to initialize ${service.name}`,
-          'SERVICE_INIT_ERROR',
-          ErrorSeverity.CRITICAL,
-        );
-      }
-      logger.info(`${service.name} initialized successfully`);
-    } catch (error) {
-      logger.error(`Failed to initialize ${service.name}`, { error });
-      throw error;
-    }
-  }
-}
-
 async function startMetricsCollection(): Promise<void> {
   setInterval(() => {
     const usedHeap = process.memoryUsage().heapUsed / 1024 / 1024;

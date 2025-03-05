@@ -36,6 +36,7 @@ export class PsychologistService {
 
   async analyzeSituation(
     userId: string,
+    currentQuestion: { text: string; id: string },
     conversationHistory: Array<{ role: string; content: string }>,
   ): Promise<PsychologistAnalysis> {
     this.logger.info('Analyzing conversation situation', { userId });
@@ -47,11 +48,11 @@ export class PsychologistService {
 
     const result = await analyzeStep({
       conversationHistory,
-      currentQuestion: session.currentQuestion,
+      currentQuestion,
     });
 
     // Make analysis more detailed based on tags
-    this.logger.debug('Psychologist tags detected', { tags: result.analysis.tags });
+    this.logger.debug('Psychologist tags detected', { tags: JSON.stringify(result, null, '   ') });
 
     let shouldFinalize =
       result.analysis.tags.includes(PsychologistTag.SESSION_COMPLETE) ||
@@ -96,6 +97,7 @@ export class PsychologistService {
       finalAnalysis += '\n\nРекомендуется запланировать следующую сессию в ближайшее время.';
     }
 
+    this.logger.debug('Final detected', { tags: JSON.stringify(finalAnalysis, null, '   ') });
     return {
       analysis: finalAnalysis,
       homework: homeworkResult.homework || undefined,

@@ -1,4 +1,5 @@
 import OpenAI from 'openai';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 import { ChatCompletionMessageParam } from 'openai/resources';
 import { config } from '../config';
 import {
@@ -16,20 +17,89 @@ import {
   COMMUNICATOR_PROMPT,
   FINAL_ANALYSIS_PROMPT,
 } from './prompts/conversation.prompts';
+import { PsychologistAnalysis } from '../../domain/services/psychologist.service';
 
-const modelDeployments = {
-  [ConversationStepType.INITIAL_ANALYSIS]: 'meta-llama/llama-3.3-70b-instruct:free',
-  [ConversationStepType.CONVERSATION_PLAN]: 'deepseek/deepseek-r1-distill-llama-70b:free',
-  [ConversationStepType.QUESTION_EXPLORATION]: 'meta-llama/llama-3.3-70b-instruct:free',
-  [ConversationStepType.FINAL_ANALYSIS]: 'deepseek/deepseek-r1-distill-llama-70b:free',
-  [ConversationStepType.HOMEWORK_GENERATION]: 'deepseek/deepseek-r1-distill-llama-70b:free',
-  [ConversationStepType.STORY_GENERATION]: 'deepseek/deepseek-r1-distill-llama-70b:free',
-} as const;
+interface AIOptions {
+  temperature: number;
+  max_tokens: number;
+  response_format?: { type: 'json_object' | 'text' };
+}
 
-const client = new OpenAI({
-  apiKey: config.azureOpenAI.apiKey,
-  baseURL: config.azureOpenAI.endpoint,
-});
+class OpenAIProvider {
+  private client: OpenAI;
+  private model: string;
+
+  constructor(model: string = 'gpt-3.5-turbo') {
+    this.client = new OpenAI({
+      apiKey: config.ai.openai!.apiKey,
+      baseURL: config.ai.openai!.endpoint,
+    });
+    this.model = model;
+  }
+
+  async generateResponse(messages: ChatCompletionMessageParam[], options: AIOptions) {
+    console.log('generateResponse', JSON.stringify(messages, null, '  '));
+    const result = await this.client.chat.completions.create({
+      model: this.model,
+      messages,
+      temperature: options.temperature,
+      max_tokens: options.max_tokens,
+      response_format: options.response_format ? { type: options.response_format.type } : undefined,
+    });
+    console.log('generateResponse!!!', JSON.stringify(result, null, '  '));
+
+    return {
+      content: result.choices[0]?.message?.content || '',
+    };
+  }
+}
+
+class GeminiProvider {
+  private client: GoogleGenerativeAI;
+  private model: string;
+
+  constructor(model: string = 'gemini-2.0-flash') {
+    this.client = new GoogleGenerativeAI(config.ai.gemini!.apiKey);
+    this.model = model;
+  }
+
+  async generateResponse(messages: ChatCompletionMessageParam[], options: AIOptions) {
+    console.log('generateResponse', JSON.stringify(messages, null, '  '));
+    const model = this.client.getGenerativeModel({ model: this.model });
+
+    const prompt = messages.map((m) => m.content).join('\n');
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+
+    console.log('generateResponse!!!', JSON.stringify(response, null, '  '));
+    return {
+      content: response.text(),
+    };
+  }
+}
+
+interface AIClient {
+  provider: OpenAIProvider | GeminiProvider;
+}
+
+const getAIProvider = (provider: 'openai' | 'gemini' = config.ai.provider, model?: string) => {
+  if (provider === 'openai') {
+    return new OpenAIProvider(model);
+  }
+  return new GeminiProvider(model);
+};
+
+const getLowTierClient = (): AIClient => {
+  return {
+    provider: getAIProvider('gemini', 'gemini-2.0-flash'),
+  };
+};
+
+const getHighTierClient = (): AIClient => {
+  return {
+    provider: getAIProvider('gemini', 'gemini-2.0-flash-thinking-exp-01-21'),
+  };
+};
 
 function extractTags(text: string): CommunicatorTag[] {
   const tagRegex = /\[(NEED_GUIDANCE|DEEP_EMOTION|RESISTANCE|CRISIS|TOPIC_CHANGE)\]/g;
@@ -45,31 +115,32 @@ function extractTags(text: string): CommunicatorTag[] {
 
 export async function makeSuggestionOrAsk(
   context: ConversationContext,
-  analysis?: PsychologistResponse,
 ): Promise<CommunicatorResponse> {
   const messages: ChatCompletionMessageParam[] = [
     {
       role: 'system',
       content: COMMUNICATOR_PROMPT,
     },
-    {
-      role: 'user',
-      content: analysis?.analysis ? `Analysis from psychologist: ${analysis?.analysis || ''}` : '',
-    },
-    {
-      role: 'user',
-      content: `Context: ${context.conversationHistory?.map((m) => `${m.role}: ${m.content}`).join('\n')}\n\nCurrent question or topic: ${context.currentQuestion?.text}`,
-    },
   ];
 
-  const result = await client.chat.completions.create({
-    model: modelDeployments['question_exploration'],
-    messages,
+  if (context.conversationHistory)
+    messages.push(
+      ...context.conversationHistory?.map((m) => ({
+        role: (m.role === 'user' ? 'user' : 'assistant') as 'user' | 'assistant' | 'system',
+        content: m.content,
+      })),
+    );
+
+  const client = getLowTierClient();
+
+  const result = await client.provider.generateResponse(messages, {
     temperature: 0.8,
     max_tokens: 300,
   });
 
-  const response = result.choices[0]?.message?.content || 'Could you tell me more about that?';
+  console.log('makeSuggestionOrAsk!!!', JSON.stringify([messages, result], null, '  '));
+
+  const response = result.content || 'Could you tell me more about that?';
   const tags = extractTags(response);
 
   return {
@@ -91,15 +162,17 @@ export async function analyzeStep(context: ConversationContext): Promise<Psychol
     },
   ];
 
-  const result = await client.chat.completions.create({
-    model: modelDeployments[context.currentQuestion?.id as ConversationStepType],
-    messages,
+  const client = getHighTierClient();
+
+  const result = await client.provider.generateResponse(messages, {
     temperature: 0.7,
     max_tokens: 800,
     response_format: { type: 'json_object' },
   });
 
-  const content = JSON.parse(result.choices[0]?.message?.content || '{}');
+  const content = JSON.parse(
+    result.content.replace(/\`\`\`json/g, '').replace(/\`\`\`/g, '') || '{}',
+  );
   return {
     analysis: {
       ...content,
@@ -121,15 +194,17 @@ export async function finalAnalyze(context: ConversationContext) {
     },
   ];
 
-  const result = await client.chat.completions.create({
-    model: modelDeployments['final_analysis'],
-    messages,
+  const client = getHighTierClient();
+
+  const result = await client.provider.generateResponse(messages, {
     temperature: 0.7,
     max_tokens: 1000,
     response_format: { type: 'json_object' },
   });
 
-  const content = JSON.parse(result.choices[0]?.message?.content || '{}');
+  const content = JSON.parse(
+    result.content.replace(/\`\`\`json/g, '').replace(/\`\`\`/g, '') || '{}',
+  );
   return {
     analysis: `
 Session Analysis:
@@ -160,16 +235,17 @@ export async function generateHomework(context: ConversationContext) {
       content: `Session summary and insights:\n${context.conversationHistory?.map((m) => `${m.role}: ${m.content}`).join('\n')}`,
     },
   ];
+  const client = getHighTierClient();
 
-  const result = await client.chat.completions.create({
-    model: modelDeployments['homework_generation'],
-    messages,
+  const result = await client.provider.generateResponse(messages, {
     temperature: 0.6,
     max_tokens: 500,
     response_format: { type: 'json_object' },
   });
 
-  const content = JSON.parse(result.choices[0]?.message?.content || '{}');
+  const content = JSON.parse(
+    result.content.replace(/\`\`\`json/g, '').replace(/\`\`\`/g, '') || '{}',
+  );
   return {
     homework: `
 Purpose: ${content.purpose}
@@ -199,16 +275,17 @@ export async function generateStory(context: ConversationContext) {
       content: `Session themes and insights:\n${context.conversationHistory?.map((m) => `${m.role}: ${m.content}`).join('\n')}`,
     },
   ];
+  const client = getHighTierClient();
 
-  const result = await client.chat.completions.create({
-    model: modelDeployments['story_generation'],
-    messages,
+  const result = await client.provider.generateResponse(messages, {
     temperature: 0.9,
     max_tokens: 800,
     response_format: { type: 'json_object' },
   });
 
-  const content = JSON.parse(result.choices[0]?.message?.content || '{}');
+  const content = JSON.parse(
+    result.content.replace(/\`\`\`json/g, '').replace(/\`\`\`/g, '') || '{}',
+  );
   return {
     story: `${content.title}\n\n${content.story}`,
     role: 'communicator',

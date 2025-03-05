@@ -38,6 +38,7 @@ export class TelegramBotService {
         userId,
         step: 'reset_conversation',
       });
+      this.sessionRepository.create({ userId });
       await ctx.reply(greeting);
     });
 

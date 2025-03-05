@@ -28,10 +28,11 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@google/generative-ai": "^0.23.0",
     "@types/node-cache": "^4.2.5",
     "dotenv": "^16.4.7",
     "node-cache": "^5.1.2",
-    "openai": "^4.0.0",
+    "openai": "^4.86.1",
     "telegraf": "^4.15.0"
   },
   "devDependencies": {

@@ -148,14 +148,46 @@ export class CommunicatorService {
 
     let communicatorResponse = await makeSuggestionOrAsk(context);
 
-    let { shouldConsultPsychologist, shouldEndSession, ...rest } =
+    let { shouldConsultPsychologist, shouldEndSession, messages } =
       await this.handleCommunicatorTags(userId, communicatorResponse, history);
-
-    let messages = rest.messages;
+    this.logger.debug('Final detected', {
+      tags: JSON.stringify(
+        {
+          shouldConsultPsychologist,
+          shouldEndSession,
+          messages,
+        },
+        null,
+        '   ',
+      ),
+    });
+    if (shouldEndSession) {
+      this.conversationStates.delete(userId);
+      return { messages, shouldEndSession };
+    }
 
     while (shouldConsultPsychologist) {
-      const analysis = await this.psychologist.analyzeSituation(userId, history);
+      const analysis = await this.psychologist.analyzeSituation(
+        userId,
+        {
+          text: messages.join('\n\n'),
+          id: 'current',
+        },
+        history,
+      );
       const psychResponse = await this.handlePsychologistTags(userId, analysis, history);
+      this.logger.debug('Final detected', { tags: JSON.stringify(psychResponse, null, '   ') });
+
+      history.push({
+        role: 'psychologist',
+        content: `Psychologist analysis:
+        - ${analysis.analysis.analysis}
+        - Suggested action: ${analysis.analysis.suggestedAction}
+        - Next steps: ${analysis.analysis.nextSteps.join(', ')}
+        - Therapeutic goals: ${analysis.analysis.therapeuticGoals.join(', ')}
+        - Recommended approach: ${analysis.analysis.recommendedApproach}
+      `,
+      });
 
       if (psychResponse.shouldEndSession) {
         messages.push(...psychResponse.messages);
@@ -163,19 +195,15 @@ export class CommunicatorService {
         return psychResponse;
       }
 
-      const updatedContext: ConversationContext = {
+      communicatorResponse = await makeSuggestionOrAsk({
         ...context,
         initialProblem: message,
-        psychologistAnalysis: analysis,
-      };
-
-      communicatorResponse = await makeSuggestionOrAsk(updatedContext);
+      });
 
       const resp = await this.handleCommunicatorTags(userId, communicatorResponse, history);
       messages = resp.messages;
       shouldConsultPsychologist = resp.shouldConsultPsychologist;
 
-      history.push({ role: 'assistant', content: psychResponse.messages.join('\n\n') });
       history.push({ role: 'assistant', content: messages.join('\n\n') });
     }
 

@@ -10,13 +10,23 @@ interface AzureOpenAIConfig {
   apiVersion: string;
 }
 
+interface GeminiConfig {
+  apiKey: string;
+}
+
+interface AIConfig {
+  provider: 'openai' | 'gemini';
+  openai?: AzureOpenAIConfig;
+  gemini?: GeminiConfig;
+}
+
 interface TelegramConfig {
   botToken: string;
   webhookUrl?: string;
 }
 
 interface AppConfig {
-  azureOpenAI: AzureOpenAIConfig;
+  ai: AIConfig;
   telegram: TelegramConfig;
   environment: 'development' | 'production';
   maxConversationLength: number;
@@ -24,12 +34,16 @@ interface AppConfig {
 }
 
 function validateConfig(config: Partial<AppConfig>): AppConfig {
-  if (!config.azureOpenAI?.apiKey) {
-    throw new Error('Azure OpenAI API key is required');
+  if (!config.ai?.provider) {
+    throw new Error('AI provider is required');
   }
 
-  if (!config.azureOpenAI?.endpoint) {
-    throw new Error('Azure OpenAI endpoint is required');
+  if (config.ai.provider === 'openai' && !config.ai.openai?.apiKey) {
+    throw new Error('OpenAI API key is required when using OpenAI provider');
+  }
+
+  if (config.ai.provider === 'gemini' && !config.ai.gemini?.apiKey) {
+    throw new Error('Gemini API key is required when using Gemini provider');
   }
 
   if (!config.telegram?.botToken) {
@@ -37,10 +51,20 @@ function validateConfig(config: Partial<AppConfig>): AppConfig {
   }
 
   return {
-    azureOpenAI: {
-      apiKey: config.azureOpenAI.apiKey,
-      endpoint: config.azureOpenAI.endpoint,
-      apiVersion: config.azureOpenAI.apiVersion || '2023-12-01-preview',
+    ai: {
+      provider: config.ai.provider,
+      openai: config.ai.openai
+        ? {
+            apiKey: config.ai.openai.apiKey,
+            endpoint: config.ai.openai.endpoint || '',
+            apiVersion: config.ai.openai.apiVersion || '2023-12-01-preview',
+          }
+        : undefined,
+      gemini: config.ai.gemini
+        ? {
+            apiKey: config.ai.gemini.apiKey,
+          }
+        : undefined,
     },
     telegram: {
       botToken: config.telegram.botToken,
@@ -54,10 +78,16 @@ function validateConfig(config: Partial<AppConfig>): AppConfig {
 
 // Load configuration from environment variables
 const config: AppConfig = validateConfig({
-  azureOpenAI: {
-    apiKey: process.env.AZURE_OPENAI_API_KEY!,
-    endpoint: process.env.AZURE_OPENAI_ENDPOINT!,
-    apiVersion: process.env.AZURE_OPENAI_API_VERSION!,
+  ai: {
+    provider: (process.env.AI_PROVIDER as 'openai' | 'gemini') || 'openai',
+    openai: {
+      apiKey: process.env.AZURE_OPENAI_API_KEY!,
+      endpoint: process.env.AZURE_OPENAI_ENDPOINT!,
+      apiVersion: process.env.AZURE_OPENAI_API_VERSION!,
+    },
+    gemini: {
+      apiKey: process.env.GEMINI_API_KEY!,
+    },
   },
   telegram: {
     botToken: process.env.TELEGRAM_BOT_TOKEN!,
@@ -68,4 +98,4 @@ const config: AppConfig = validateConfig({
   maxQuestionExchanges: parseInt(process.env.MAX_QUESTION_EXCHANGES || '5', 10),
 });
 
-export { config, AppConfig, AzureOpenAIConfig, TelegramConfig };
+export { config, AppConfig, AzureOpenAIConfig, GeminiConfig, AIConfig, TelegramConfig };
