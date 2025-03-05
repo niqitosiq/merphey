@@ -1,5 +1,4 @@
 import { Logger } from '../../utils/logger';
-import { AzureOpenAIService } from '../../infrastructure/llm/azure-openai.service';
 import { UserSessionRepository } from '../repositories/user-session.repository';
 import {
   analyzeStep,
@@ -7,13 +6,7 @@ import {
   generateHomework,
   generateStory,
 } from '../../infrastructure/llm/conversation-processors';
-import {
-  ConversationStepType,
-  PsychologistTag,
-  HomeworkTag,
-  StoryTag,
-  SessionTag,
-} from '../entities/conversation';
+import { PsychologistTag } from '../entities/conversation';
 
 export interface PsychologistAnalysis {
   analysis: {
@@ -39,10 +32,7 @@ interface TherapyRecommendations {
 export class PsychologistService {
   private readonly logger = Logger.getInstance();
 
-  constructor(
-    private readonly llmService: AzureOpenAIService,
-    private readonly sessionRepository: UserSessionRepository,
-  ) {}
+  constructor(private readonly sessionRepository: UserSessionRepository) {}
 
   async analyzeSituation(
     userId: string,
@@ -52,18 +42,13 @@ export class PsychologistService {
 
     const session = await this.sessionRepository.findByUserId(userId);
     if (!session) {
-      // create session
       throw new Error('No session found for user');
     }
 
-    const result = await this.llmService.process(
-      analyzeStep,
-      {
-        conversationHistory,
-        currentQuestion: session.currentQuestion,
-      },
-      ConversationStepType.QUESTION_EXPLORATION,
-    );
+    const result = await analyzeStep({
+      conversationHistory,
+      currentQuestion: session.currentQuestion,
+    });
 
     // Make analysis more detailed based on tags
     this.logger.debug('Psychologist tags detected', { tags: result.analysis.tags });
@@ -94,33 +79,20 @@ export class PsychologistService {
     this.logger.info('Finalizing session', { userId });
 
     // Generate final analysis
-    const analysisResult = await this.llmService.process(
-      finalAnalyze,
-      { conversationHistory },
-      ConversationStepType.FINAL_ANALYSIS,
-    );
+    const analysisResult = await finalAnalyze({ conversationHistory });
 
     // Generate appropriate homework based on session content
-    const homeworkResult = await this.llmService.process(
-      generateHomework,
-      { conversationHistory },
-      ConversationStepType.HOMEWORK_GENERATION,
-    );
+    const homeworkResult = await generateHomework({ conversationHistory });
 
     // Generate therapeutic story
-    const storyResult = await this.llmService.process(
-      generateStory,
-      { conversationHistory },
-      ConversationStepType.STORY_GENERATION,
-    );
+    const storyResult = await generateStory({ conversationHistory });
 
     // Process analysis results and add urgency/followup recommendations
-    const analysisContent = JSON.parse(analysisResult.analysis || '{}');
     let finalAnalysis = analysisResult.analysis || '';
 
-    if (analysisContent.tags?.includes(SessionTag.URGENT_FOLLOWUP)) {
+    if (analysisResult.tags.includes(PsychologistTag.CRISIS_PROTOCOL)) {
       finalAnalysis += '\n\nВажно: Рекомендуется срочная следующая сессия.';
-    } else if (analysisContent.tags?.includes(SessionTag.SCHEDULE_FOLLOWUP)) {
+    } else if (analysisResult.tags.includes(PsychologistTag.WRAP_UP)) {
       finalAnalysis += '\n\nРекомендуется запланировать следующую сессию в ближайшее время.';
     }
 

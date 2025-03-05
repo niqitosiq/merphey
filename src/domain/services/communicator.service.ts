@@ -1,12 +1,18 @@
 import { Logger } from '../../utils/logger';
 import { PsychologistService, PsychologistAnalysis } from './psychologist.service';
-import { makeSuggestionOrAsk } from '../../infrastructure/llm/conversation-processors';
-import { AzureOpenAIService } from '../../infrastructure/llm/azure-openai.service';
+import { makeSuggestionOrAsk, analyzeStep } from '../../infrastructure/llm/conversation-processors';
 import { ConversationStepType, CommunicatorTag, PsychologistTag } from '../entities/conversation';
 
 interface CommunicatorResponse {
   messages: string[];
   shouldEndSession?: boolean;
+}
+
+interface ConversationContext {
+  conversationHistory: Array<{ role: string; content: string }>;
+  currentQuestion: { text: string; id: string };
+  initialProblem?: string;
+  psychologistAnalysis?: PsychologistAnalysis;
 }
 
 export class CommunicatorService {
@@ -19,10 +25,7 @@ export class CommunicatorService {
     'Приветствую вас! 🌟',
   ];
 
-  constructor(
-    private readonly psychologist: PsychologistService,
-    private readonly llmService: AzureOpenAIService,
-  ) {}
+  constructor(private readonly psychologist: PsychologistService) {}
 
   async startConversation(userId: string): Promise<string> {
     this.logger.info('Starting new conversation', { userId });
@@ -135,59 +138,47 @@ export class CommunicatorService {
   async handleUserMessage(userId: string, message: string): Promise<CommunicatorResponse> {
     this.logger.info('Handling user message', { userId });
 
-    // Get or initialize conversation history
     let history = this.conversationStates.get(userId) || [];
     history.push({ role: 'user', content: message });
 
-    // Get initial communicator response
-    let communicatorResponse = await this.llmService.process(
-      makeSuggestionOrAsk,
-      {
-        conversationHistory: history,
-        currentQuestion: { text: message, id: 'current' },
-      },
-      ConversationStepType.QUESTION_EXPLORATION,
-    );
+    const context: ConversationContext = {
+      conversationHistory: history,
+      currentQuestion: { text: message, id: 'current' },
+    };
 
-    // Handle communicator tags
-    let { shouldConsultPsychologist, shouldEndSession, messages } =
+    let communicatorResponse = await makeSuggestionOrAsk(context);
+
+    let { shouldConsultPsychologist, shouldEndSession, ...rest } =
       await this.handleCommunicatorTags(userId, communicatorResponse, history);
 
-    history.push({ role: 'assistant', content: messages.join('\n\n') });
+    let messages = rest.messages;
 
-    // Implement consultation loop
     while (shouldConsultPsychologist) {
       const analysis = await this.psychologist.analyzeSituation(userId, history);
       const psychResponse = await this.handlePsychologistTags(userId, analysis, history);
 
-      // Add psychologist's guidance to the response
       if (psychResponse.shouldEndSession) {
         messages.push(...psychResponse.messages);
         this.conversationStates.delete(userId);
         return psychResponse;
       }
 
-      communicatorResponse = await this.llmService.process(
-        makeSuggestionOrAsk,
-        {
-          conversationHistory: history,
-          currentQuestion: { text: message, id: 'current' },
-          initialProblem: message,
-          psychologistAnalysis: analysis,
-        },
-        ConversationStepType.QUESTION_EXPLORATION,
-      );
+      const updatedContext: ConversationContext = {
+        ...context,
+        initialProblem: message,
+        psychologistAnalysis: analysis,
+      };
+
+      communicatorResponse = await makeSuggestionOrAsk(updatedContext);
 
       const resp = await this.handleCommunicatorTags(userId, communicatorResponse, history);
       messages = resp.messages;
       shouldConsultPsychologist = resp.shouldConsultPsychologist;
 
-      console.log('shouldConsultPsychologist', shouldConsultPsychologist);
       history.push({ role: 'assistant', content: psychResponse.messages.join('\n\n') });
       history.push({ role: 'assistant', content: messages.join('\n\n') });
     }
 
-    // Add final response to history and update state
     this.conversationStates.set(userId, history);
 
     return {

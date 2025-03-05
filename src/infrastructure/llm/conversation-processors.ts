@@ -1,11 +1,13 @@
 import OpenAI from 'openai';
 import { ChatCompletionMessageParam } from 'openai/resources';
+import { config } from '../config';
 import {
   ConversationContext,
   CommunicatorTag,
   PsychologistTag,
   CommunicatorResponse,
   PsychologistResponse,
+  ConversationStepType,
 } from '../../domain/entities/conversation';
 import {
   PSYCHOLOGIST_ANALYSIS_PROMPT,
@@ -15,9 +17,23 @@ import {
   FINAL_ANALYSIS_PROMPT,
 } from './prompts/conversation.prompts';
 
+const modelDeployments = {
+  [ConversationStepType.INITIAL_ANALYSIS]: 'meta-llama/llama-3.3-70b-instruct:free',
+  [ConversationStepType.CONVERSATION_PLAN]: 'deepseek/deepseek-r1-distill-llama-70b:free',
+  [ConversationStepType.QUESTION_EXPLORATION]: 'meta-llama/llama-3.3-70b-instruct:free',
+  [ConversationStepType.FINAL_ANALYSIS]: 'deepseek/deepseek-r1-distill-llama-70b:free',
+  [ConversationStepType.HOMEWORK_GENERATION]: 'deepseek/deepseek-r1-distill-llama-70b:free',
+  [ConversationStepType.STORY_GENERATION]: 'deepseek/deepseek-r1-distill-llama-70b:free',
+} as const;
+
+const client = new OpenAI({
+  apiKey: config.azureOpenAI.apiKey,
+  baseURL: config.azureOpenAI.endpoint,
+});
+
 function extractTags(text: string): CommunicatorTag[] {
-  const tags: CommunicatorTag[] = [];
   const tagRegex = /\[(NEED_GUIDANCE|DEEP_EMOTION|RESISTANCE|CRISIS|TOPIC_CHANGE)\]/g;
+  const tags: CommunicatorTag[] = [];
   let match;
 
   while ((match = tagRegex.exec(text)) !== null) {
@@ -28,8 +44,6 @@ function extractTags(text: string): CommunicatorTag[] {
 }
 
 export async function makeSuggestionOrAsk(
-  client: OpenAI,
-  deployment: string,
   context: ConversationContext,
   analysis?: PsychologistResponse,
 ): Promise<CommunicatorResponse> {
@@ -49,13 +63,12 @@ export async function makeSuggestionOrAsk(
   ];
 
   const result = await client.chat.completions.create({
-    model: deployment,
+    model: modelDeployments['question_exploration'],
     messages,
     temperature: 0.8,
     max_tokens: 300,
   });
 
-  console.info('makeSuggestionOrAsk', { result });
   const response = result.choices[0]?.message?.content || 'Could you tell me more about that?';
   const tags = extractTags(response);
 
@@ -66,11 +79,7 @@ export async function makeSuggestionOrAsk(
   };
 }
 
-export async function analyzeStep(
-  client: OpenAI,
-  deployment: string,
-  context: ConversationContext,
-): Promise<PsychologistResponse> {
+export async function analyzeStep(context: ConversationContext): Promise<PsychologistResponse> {
   const messages: ChatCompletionMessageParam[] = [
     {
       role: 'system',
@@ -83,7 +92,7 @@ export async function analyzeStep(
   ];
 
   const result = await client.chat.completions.create({
-    model: deployment,
+    model: modelDeployments[context.currentQuestion?.id as ConversationStepType],
     messages,
     temperature: 0.7,
     max_tokens: 800,
@@ -100,11 +109,7 @@ export async function analyzeStep(
   };
 }
 
-export async function finalAnalyze(
-  client: OpenAI,
-  deployment: string,
-  context: ConversationContext,
-) {
+export async function finalAnalyze(context: ConversationContext) {
   const messages: ChatCompletionMessageParam[] = [
     {
       role: 'system',
@@ -117,7 +122,7 @@ export async function finalAnalyze(
   ];
 
   const result = await client.chat.completions.create({
-    model: deployment,
+    model: modelDeployments['final_analysis'],
     messages,
     temperature: 0.7,
     max_tokens: 1000,
@@ -138,16 +143,13 @@ ${content.futureAreas?.join('\n')}
 
 Recommendations:
 ${content.recommendations?.join('\n')}
-    `.trim(),
+      `.trim(),
     role: 'psychologist',
+    tags: content.tags?.map((tag: string) => tag as PsychologistTag) || [],
   };
 }
 
-export async function generateHomework(
-  client: OpenAI,
-  deployment: string,
-  context: ConversationContext,
-) {
+export async function generateHomework(context: ConversationContext) {
   const messages: ChatCompletionMessageParam[] = [
     {
       role: 'system',
@@ -160,7 +162,7 @@ export async function generateHomework(
   ];
 
   const result = await client.chat.completions.create({
-    model: deployment,
+    model: modelDeployments['homework_generation'],
     messages,
     temperature: 0.6,
     max_tokens: 500,
@@ -181,16 +183,12 @@ Success indicators:
 ${content.successIndicators?.join('\n')}
 
 Timeframe: ${content.timeframe}
-    `.trim(),
+      `.trim(),
     role: 'psychologist',
   };
 }
 
-export async function generateStory(
-  client: OpenAI,
-  deployment: string,
-  context: ConversationContext,
-) {
+export async function generateStory(context: ConversationContext) {
   const messages: ChatCompletionMessageParam[] = [
     {
       role: 'system',
@@ -203,7 +201,7 @@ export async function generateStory(
   ];
 
   const result = await client.chat.completions.create({
-    model: deployment,
+    model: modelDeployments['story_generation'],
     messages,
     temperature: 0.9,
     max_tokens: 800,

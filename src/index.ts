@@ -1,4 +1,3 @@
-import { AzureOpenAIService } from './infrastructure/llm/azure-openai.service';
 import { TelegramBotService } from './infrastructure/telegram/telegram-bot.service';
 import { UserSessionRepositoryImpl } from './domain/repositories/user-session.repository';
 import { Logger } from './utils/logger';
@@ -11,10 +10,7 @@ const logger = Logger.getInstance();
 const metrics = MetricsService.getInstance();
 
 async function checkServices(): Promise<void> {
-  const services = [
-    { name: 'UserSessionRepository', instance: new UserSessionRepositoryImpl() },
-    { name: 'AzureOpenAIService', instance: new AzureOpenAIService() },
-  ];
+  const services = [{ name: 'UserSessionRepository', instance: new UserSessionRepositoryImpl() }];
 
   for (const service of services) {
     try {
@@ -80,16 +76,12 @@ async function bootstrap() {
   logger.info('Starting application...');
 
   try {
-    // Check all required services
-    await checkServices();
-
     // Initialize base services
     const sessionRepository = new UserSessionRepositoryImpl();
-    const llmService = new AzureOpenAIService();
 
     // Initialize domain services with dependencies
-    const psychologistService = new PsychologistService(llmService, sessionRepository);
-    const communicatorService = new CommunicatorService(psychologistService, llmService);
+    const psychologistService = new PsychologistService(sessionRepository);
+    const communicatorService = new CommunicatorService(psychologistService);
 
     // Initialize bot service with communicator
     const botService = new TelegramBotService(communicatorService, sessionRepository);
