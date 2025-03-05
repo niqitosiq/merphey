@@ -91,23 +91,23 @@ const getAIProvider = (provider: 'openai' | 'gemini' = config.ai.provider, model
 
 const getLowTierClient = (): AIClient => {
   return {
-    provider: getAIProvider('gemini', 'gemini-2.0-flash'),
+    provider: getAIProvider('openai', 'google/gemini-2.0-flash-001'),
   };
 };
 
 const getHighTierClient = (): AIClient => {
   return {
-    provider: getAIProvider('gemini', 'gemini-2.0-flash-thinking-exp-01-21'),
+    provider: getAIProvider('openai', 'deepseek/deepseek-r1'),
   };
 };
 
-function extractTags(text: string): CommunicatorTag[] {
+function extractTags<T = CommunicatorTag>(text: string): T[] {
   const tagRegex = /\[(NEED_GUIDANCE|DEEP_EMOTION|RESISTANCE|CRISIS|TOPIC_CHANGE)\]/g;
-  const tags: CommunicatorTag[] = [];
+  const tags: T[] = [];
   let match;
 
   while ((match = tagRegex.exec(text)) !== null) {
-    tags.push(match[1] as CommunicatorTag);
+    tags.push(match[1] as T);
   }
 
   return tags;
@@ -126,7 +126,10 @@ export async function makeSuggestionOrAsk(
   if (context.conversationHistory)
     messages.push(
       ...context.conversationHistory?.map((m) => ({
-        role: (m.role === 'user' ? 'user' : 'assistant') as 'user' | 'assistant' | 'system',
+        role: (m.role === 'psychologist' || m.role === 'user' ? 'user' : 'assistant') as
+          | 'user'
+          | 'assistant'
+          | 'system',
         content: m.content,
       })),
     );
@@ -156,28 +159,32 @@ export async function analyzeStep(context: ConversationContext): Promise<Psychol
       role: 'system',
       content: PSYCHOLOGIST_ANALYSIS_PROMPT,
     },
-    {
-      role: 'user',
-      content: `Full conversation history:\n${context.conversationHistory?.map((m) => `${m.role}: ${m.content}`).join('\n')}\n\nCurrent topic: ${context.currentQuestion?.text || 'Initial conversation'}`,
-    },
   ];
+
+  if (context.conversationHistory)
+    messages.push(
+      ...context.conversationHistory?.map((m) => ({
+        role: (m.role === 'psychologist' || m.role === 'user' ? 'user' : 'assistant') as
+          | 'user'
+          | 'assistant'
+          | 'system',
+        content: m.content,
+      })),
+    );
 
   const client = getHighTierClient();
 
-  const result = await client.provider.generateResponse(messages, {
+  const { content } = await client.provider.generateResponse(messages, {
     temperature: 0.7,
     max_tokens: 800,
     response_format: { type: 'json_object' },
   });
 
-  const content = JSON.parse(
-    result.content.replace(/\`\`\`json/g, '').replace(/\`\`\`/g, '') || '{}',
-  );
+  const tags = extractTags<PsychologistTag>(content);
+
   return {
-    analysis: {
-      ...content,
-      tags: content.tags?.map((tag: string) => tag as PsychologistTag) || [],
-    },
+    response: content,
+    tags,
     role: 'psychologist',
   };
 }

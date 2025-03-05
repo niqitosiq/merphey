@@ -14,7 +14,7 @@ export class TelegramBotService {
     private readonly communicator: CommunicatorService,
     sessionRepository: UserSessionRepository,
   ) {
-    this.bot = new Telegraf(config.telegram.botToken);
+    this.bot = new Telegraf(config.telegram.botToken, { handlerTimeout: 5 * 60 * 1000 });
     this.sessionRepository = sessionRepository;
     this.setupHandlers();
   }

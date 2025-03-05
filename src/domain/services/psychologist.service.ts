@@ -9,18 +9,9 @@ import {
 import { PsychologistTag } from '../entities/conversation';
 
 export interface PsychologistAnalysis {
-  analysis: {
-    analysis: string;
-    suggestedAction: 'ask' | 'tell' | 'finalize' | 'seek_guidance';
-    shouldFinalize: boolean;
-    nextSteps: string[];
-    warningSignals: string[];
-    therapeuticGoals: string[];
-    tags: PsychologistTag[];
-    recommendedApproach: string;
-  };
-  suggestedAction: string;
+  analysis: string;
   shouldFinalize: boolean;
+  tags?: PsychologistTag[];
 }
 
 interface TherapyRecommendations {
@@ -46,29 +37,23 @@ export class PsychologistService {
       throw new Error('No session found for user');
     }
 
-    const result = await analyzeStep({
+    const { tags, response } = await analyzeStep({
       conversationHistory,
       currentQuestion,
     });
 
     // Make analysis more detailed based on tags
-    this.logger.debug('Psychologist tags detected', { tags: JSON.stringify(result, null, '   ') });
+    this.logger.debug('Psychologist tags detected', {
+      tags: JSON.stringify(response, null, '   '),
+    });
 
     let shouldFinalize =
-      result.analysis.tags.includes(PsychologistTag.SESSION_COMPLETE) ||
-      result.analysis.tags.includes(PsychologistTag.CRISIS_PROTOCOL);
-
-    // Adjust the analysis based on detected tags
-    if (result.analysis.tags.includes(PsychologistTag.EXPLORE_DEEPER)) {
-      result.analysis.recommendedApproach =
-        'Углубить исследование темы, задавать более глубокие вопросы';
-    } else if (result.analysis.tags.includes(PsychologistTag.ADJUST_APPROACH)) {
-      result.analysis.recommendedApproach = 'Скорректировать подход, проявить больше эмпатии';
-    }
+      tags?.includes(PsychologistTag.SESSION_COMPLETE) ||
+      tags?.includes(PsychologistTag.CRISIS_PROTOCOL) ||
+      false;
 
     return {
-      analysis: result.analysis,
-      suggestedAction: result.analysis.suggestedAction,
+      analysis: response,
       shouldFinalize,
     };
   }

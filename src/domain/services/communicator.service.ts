@@ -87,10 +87,10 @@ export class CommunicatorService {
   ): Promise<CommunicatorResponse> {
     this.logger.debug('Processing psychologist tags', {
       userId,
-      tags: psychologistAnalysis.analysis.tags,
+      tags: psychologistAnalysis.tags,
     });
 
-    if (psychologistAnalysis.analysis.tags.includes(PsychologistTag.CRISIS_PROTOCOL)) {
+    if (psychologistAnalysis.tags?.includes(PsychologistTag.CRISIS_PROTOCOL)) {
       return {
         messages: [
           'Я вижу, что ситуация требует особого внимания.',
@@ -100,7 +100,7 @@ export class CommunicatorService {
       };
     }
 
-    if (psychologistAnalysis.analysis.tags.includes(PsychologistTag.SESSION_COMPLETE)) {
+    if (psychologistAnalysis.tags?.includes(PsychologistTag.SESSION_COMPLETE)) {
       const recommendations = await this.psychologist.finalizeSession(userId, history);
 
       const messages = ['Спасибо за откровенный разговор.', recommendations.analysis];
@@ -121,17 +121,17 @@ export class CommunicatorService {
       };
     }
 
-    if (psychologistAnalysis.analysis.tags.includes(PsychologistTag.WRAP_UP)) {
+    if (psychologistAnalysis.tags?.includes(PsychologistTag.WRAP_UP)) {
       return {
         messages: [
           'Давайте подведем промежуточный итог нашей беседы...',
-          psychologistAnalysis.analysis.analysis,
+          psychologistAnalysis.analysis,
         ],
       };
     }
 
     return {
-      messages: [psychologistAnalysis.analysis.analysis],
+      messages: [psychologistAnalysis.analysis],
     };
   }
 
@@ -166,47 +166,37 @@ export class CommunicatorService {
       return { messages, shouldEndSession };
     }
 
-    while (shouldConsultPsychologist) {
-      const analysis = await this.psychologist.analyzeSituation(
-        userId,
-        {
-          text: messages.join('\n\n'),
-          id: 'current',
-        },
-        history,
-      );
-      const psychResponse = await this.handlePsychologistTags(userId, analysis, history);
-      this.logger.debug('Final detected', { tags: JSON.stringify(psychResponse, null, '   ') });
+    // while (shouldConsultPsychologist) {
+    const analysis = await this.psychologist.analyzeSituation(
+      userId,
+      {
+        text: messages.join('\n\n'),
+        id: 'current',
+      },
+      history,
+    );
+    const psychResponse = await this.handlePsychologistTags(userId, analysis, history);
+    this.logger.debug('Final detected', { tags: JSON.stringify(psychResponse, null, '   ') });
 
-      history.push({
-        role: 'psychologist',
-        content: `Psychologist analysis:
-        - ${analysis.analysis.analysis}
-        - Suggested action: ${analysis.analysis.suggestedAction}
-        - Next steps: ${analysis.analysis.nextSteps.join(', ')}
-        - Therapeutic goals: ${analysis.analysis.therapeuticGoals.join(', ')}
-        - Recommended approach: ${analysis.analysis.recommendedApproach}
-      `,
-      });
-
-      if (psychResponse.shouldEndSession) {
-        messages.push(...psychResponse.messages);
-        this.conversationStates.delete(userId);
-        return psychResponse;
-      }
-
-      communicatorResponse = await makeSuggestionOrAsk({
-        ...context,
-        initialProblem: message,
-      });
-
-      const resp = await this.handleCommunicatorTags(userId, communicatorResponse, history);
-      messages = resp.messages;
-      shouldConsultPsychologist = resp.shouldConsultPsychologist;
-
-      history.push({ role: 'assistant', content: messages.join('\n\n') });
+    if (psychResponse.shouldEndSession) {
+      messages.push(...psychResponse.messages);
+      this.conversationStates.delete(userId);
+      return psychResponse;
     }
 
+    history.push({
+      role: 'psychologist',
+      content: `Psychologist analysis: \n ${analysis.analysis}`,
+    });
+
+    communicatorResponse = await makeSuggestionOrAsk(context);
+
+    const resp = await this.handleCommunicatorTags(userId, communicatorResponse, history);
+    messages = resp.messages;
+    // shouldConsultPsychologist = resp.shouldConsultPsychologist;
+    // }
+
+    history.push({ role: 'assistant', content: messages.join('\n\n') });
     this.conversationStates.set(userId, history);
 
     return {

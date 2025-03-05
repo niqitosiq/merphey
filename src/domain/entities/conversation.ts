@@ -64,16 +64,8 @@ export enum StoryTag {
 }
 
 export interface PsychologistResponse {
-  analysis: {
-    analysis: string;
-    suggestedAction: 'ask' | 'tell' | 'finalize' | 'seek_guidance';
-    shouldFinalize: boolean;
-    nextSteps: string[];
-    warningSignals: string[];
-    therapeuticGoals: string[];
-    tags: PsychologistTag[];
-    recommendedApproach: string;
-  };
+  response: string;
+  tags?: PsychologistTag[];
   role: 'psychologist';
 }
 
