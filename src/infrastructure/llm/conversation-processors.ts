@@ -126,7 +126,7 @@ export async function makeSuggestionOrAsk(
   if (context.conversationHistory)
     messages.push(
       ...context.conversationHistory?.map((m) => ({
-        role: (m.role === 'psychologist' || m.role === 'user' ? 'user' : 'assistant') as
+        role: (m.role === 'psychologist' ? 'system' : m.role === 'user' ? 'user' : 'assistant') as
           | 'user'
           | 'assistant'
           | 'system',
@@ -172,12 +172,17 @@ export async function analyzeStep(context: ConversationContext): Promise<Psychol
       })),
     );
 
+  messages.push({
+    role: 'user',
+    content:
+      context.currentQuestion?.text || 'Help me this situation above, I don\t know how to proceed',
+  });
+
   const client = getHighTierClient();
 
   const { content } = await client.provider.generateResponse(messages, {
-    temperature: 0.7,
-    max_tokens: 800,
-    response_format: { type: 'json_object' },
+    temperature: 0.9,
+    max_tokens: 10000,
   });
 
   const tags = extractTags<PsychologistTag>(content);

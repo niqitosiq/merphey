@@ -2,6 +2,9 @@ import { Logger } from '../../utils/logger';
 import { PsychologistService, PsychologistAnalysis } from './psychologist.service';
 import { makeSuggestionOrAsk, analyzeStep } from '../../infrastructure/llm/conversation-processors';
 import { ConversationStepType, CommunicatorTag, PsychologistTag } from '../entities/conversation';
+import { Context, NarrowedContext } from 'telegraf';
+import { Message, Update } from 'telegraf/typings/core/types/typegram';
+import { TelegramBotService } from '../../infrastructure/telegram/telegram-bot.service';
 
 interface CommunicatorResponse {
   messages: string[];
@@ -14,6 +17,8 @@ interface ConversationContext {
   initialProblem?: string;
   psychologistAnalysis?: PsychologistAnalysis;
 }
+
+type TextMessageContext = Context<Update.MessageUpdate<Message.TextMessage>>;
 
 export class CommunicatorService {
   private readonly logger = Logger.getInstance();
@@ -58,7 +63,6 @@ export class CommunicatorService {
 
       if (
         response.tags.includes(CommunicatorTag.NEED_GUIDANCE) ||
-        response.tags.includes(CommunicatorTag.DEEP_EMOTION) ||
         response.tags.includes(CommunicatorTag.CRISIS)
       ) {
         shouldConsultPsychologist = true;
@@ -89,16 +93,6 @@ export class CommunicatorService {
       userId,
       tags: psychologistAnalysis.tags,
     });
-
-    if (psychologistAnalysis.tags?.includes(PsychologistTag.CRISIS_PROTOCOL)) {
-      return {
-        messages: [
-          'Я вижу, что ситуация требует особого внимания.',
-          'Рекомендую обратиться к специалисту для личной консультации.',
-        ],
-        shouldEndSession: false,
-      };
-    }
 
     if (psychologistAnalysis.tags?.includes(PsychologistTag.SESSION_COMPLETE)) {
       const recommendations = await this.psychologist.finalizeSession(userId, history);
@@ -135,7 +129,11 @@ export class CommunicatorService {
     };
   }
 
-  async handleUserMessage(userId: string, message: string): Promise<CommunicatorResponse> {
+  async handleUserMessage(
+    userId: string,
+    message: string,
+    ctx: TextMessageContext,
+  ): Promise<CommunicatorResponse> {
     this.logger.info('Handling user message', { userId });
 
     let history = this.conversationStates.get(userId) || [];
@@ -146,6 +144,7 @@ export class CommunicatorService {
       currentQuestion: { text: message, id: 'current' },
     };
 
+    await ctx.sendChatAction('typing');
     let communicatorResponse = await makeSuggestionOrAsk(context);
 
     let { shouldConsultPsychologist, shouldEndSession, messages } =
@@ -167,35 +166,39 @@ export class CommunicatorService {
     }
 
     // while (shouldConsultPsychologist) {
-    const analysis = await this.psychologist.analyzeSituation(
-      userId,
-      {
-        text: messages.join('\n\n'),
-        id: 'current',
-      },
-      history,
-    );
-    const psychResponse = await this.handlePsychologistTags(userId, analysis, history);
-    this.logger.debug('Final detected', { tags: JSON.stringify(psychResponse, null, '   ') });
+    if (shouldConsultPsychologist) {
+      await ctx.sendChatAction('typing');
+      const analysis = await this.psychologist.analyzeSituation(
+        userId,
+        {
+          text: messages.join('\n\n'),
+          id: 'current',
+        },
+        history,
+      );
+      const psychResponse = await this.handlePsychologistTags(userId, analysis, history);
+      this.logger.debug('Final detected', { tags: JSON.stringify(psychResponse, null, '   ') });
 
-    if (psychResponse.shouldEndSession) {
-      messages.push(...psychResponse.messages);
-      this.conversationStates.delete(userId);
-      return psychResponse;
+      if (psychResponse.shouldEndSession) {
+        messages.push(...psychResponse.messages);
+        this.conversationStates.delete(userId);
+        return psychResponse;
+      }
+
+      history.push({
+        role: 'psychologist',
+        content: `Psychologist analysis: \n ${analysis.analysis}`,
+      });
+
+      await ctx.sendChatAction('typing');
+      communicatorResponse = await makeSuggestionOrAsk(context);
+
+      const resp = await this.handleCommunicatorTags(userId, communicatorResponse, history);
+      messages = resp.messages;
     }
-
-    history.push({
-      role: 'psychologist',
-      content: `Psychologist analysis: \n ${analysis.analysis}`,
-    });
-
-    communicatorResponse = await makeSuggestionOrAsk(context);
-
-    const resp = await this.handleCommunicatorTags(userId, communicatorResponse, history);
-    messages = resp.messages;
     // shouldConsultPsychologist = resp.shouldConsultPsychologist;
     // }
-
+    await ctx.sendChatAction('typing');
     history.push({ role: 'assistant', content: messages.join('\n\n') });
     this.conversationStates.set(userId, history);
 

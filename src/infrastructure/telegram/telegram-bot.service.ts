@@ -6,7 +6,7 @@ import { ErrorBoundary } from '../../utils/error-boundary';
 import { UserSessionRepository } from '../../domain/repositories/user-session.repository';
 
 export class TelegramBotService {
-  private bot: Telegraf;
+  public bot: Telegraf;
   private readonly logger = Logger.getInstance();
   private readonly sessionRepository: UserSessionRepository;
 
@@ -62,7 +62,7 @@ export class TelegramBotService {
 
         // Everything goes through the communicator
         const response = await ErrorBoundary.wrap(
-          () => this.communicator.handleUserMessage(userId, message),
+          () => this.communicator.handleUserMessage(userId, message, ctx),
           { userId, step: 'handle_message' },
         );
 
