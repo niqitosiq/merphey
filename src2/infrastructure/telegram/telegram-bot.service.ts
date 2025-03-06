@@ -1,4 +1,5 @@
 import { Telegraf } from 'telegraf';
+import { message } from 'telegraf/filters';
 import { config } from '../config';
 import { UserSessionRepository } from '../../domain/repositories/user-session.repository';
 import { proceedWithText } from '../../domain/services/main.service';
@@ -9,7 +10,7 @@ export class TelegramBotService {
   private readonly sessionRepository: UserSessionRepository;
 
   constructor(sessionRepository: UserSessionRepository) {
-    this.bot = new Telegraf(config.telegram.botToken, { handlerTimeout: 5 * 60 * 1000 });
+    this.bot = new Telegraf(config.telegram.botToken, { handlerTimeout: 5 * 60 * 1000 , telegram:{webhookReply: false}});
     this.sessionRepository = sessionRepository;
     this.setupHandlers();
   }
@@ -40,7 +41,7 @@ export class TelegramBotService {
       );
     });
 
-    this.bot.on('text', async (ctx) => {
+    this.bot.on(message('text'), async (ctx) => {
       const userId = ctx.from.id.toString();
       const message = ctx.message.text;
 
