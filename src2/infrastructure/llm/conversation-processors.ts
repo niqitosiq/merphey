@@ -22,6 +22,7 @@ class OpenAIProvider {
   }
 
   async generateResponse(messages: ChatCompletionMessageParam[], options: AIOptions) {
+    console.log('Generating response with model', messages);
     const result = await this.client.chat.completions.create({
       model: this.model,
       messages,
@@ -29,6 +30,8 @@ class OpenAIProvider {
       max_tokens: options.max_tokens,
       response_format: options.response_format ? { type: options.response_format.type } : undefined,
     });
+
+    console.log('Generated response', result.choices);
 
     return {
       content: result.choices[0]?.message?.content || '',

@@ -3,11 +3,8 @@ import { UserSession, CreateUserSessionParams, UserSessionFactory } from '../ent
 
 export interface UserSessionRepository {
   create(params: CreateUserSessionParams): Promise<UserSession>;
-  findById(id: string): Promise<UserSession | null>;
   findByUserId(userId: string): Promise<UserSession | null>;
   update(session: UserSession): Promise<UserSession>;
-  delete(id: string): Promise<void>;
-  findActiveByUserId(userId: string): Promise<UserSession | null>;
 }
 
 export class UserSessionRepositoryImpl implements UserSessionRepository {
@@ -20,17 +17,10 @@ export class UserSessionRepositoryImpl implements UserSessionRepository {
 
   async create(params: CreateUserSessionParams): Promise<UserSession> {
     const session = UserSessionFactory.create(params);
-    this.cache.set(session.id, session);
+    console.log(session, 'session');
+
+    this.cache.set(session.userId, session);
     return session;
-  }
-
-  async findById(id: string): Promise<UserSession | null> {
-    return this.cache.get<UserSession>(id) || null;
-  }
-
-  async findByUserId(userId: string): Promise<UserSession | null> {
-    const sessions = this.cache.mget<UserSession>(this.cache.keys());
-    return Object.values(sessions).find(session => session.userId === userId) || null;
   }
 
   async update(session: UserSession): Promise<UserSession> {
@@ -39,15 +29,8 @@ export class UserSessionRepositoryImpl implements UserSessionRepository {
     return session;
   }
 
-  async delete(id: string): Promise<void> {
-    this.cache.del(id);
-  }
-
-  async findActiveByUserId(userId: string): Promise<UserSession | null> {
-    const session = await this.findByUserId(userId);
-    if (session && !session.isComplete) {
-      return session;
-    }
-    return null;
+  async findByUserId(userId: string): Promise<UserSession | null> {
+    const sessions = this.cache.mget<UserSession>(this.cache.keys());
+    return Object.values(sessions).find((session) => session.userId === userId) || null;
   }
 }

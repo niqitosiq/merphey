@@ -4,154 +4,147 @@ import {
 } from '../../infrastructure/llm/conversation-processors';
 import { ConversationContext, HistoryMessage } from '../entities/conversation';
 
-const SWITCHER_PROMPT = `You are Switcher, an intelligent routing mechanism in the psychological assistance system. Your task is to analyze the entire conversation history, including the analysis from the Psychologist network, the user's responses, and interactions with the Communicator. Based on this, you must choose one of three actions:
+// Import prompts and their types from separate files
+import { SWITCHER_PROMPT, SwitcherResponse } from './prompts/switcher.prompt';
+import { COMMUNICATOR_PROMPT, CommunicatorResponse } from './prompts/communicator.prompt';
+import { PSYCHOLOGIST_ANALYSIS_PROMPT, PsychologistResponse } from './prompts/psychologist.prompt';
+import { FINISHING_PROMPT, FinishingResponse } from './prompts/finishing.prompt';
 
-If the session has reached a logical conclusion, the user has received enough information and recommendations, and it is time to schedule the next session – return:
-[APPOINT_NEXT_SESSION]
-
-If the dialogue between the Communicator and the user has reached a new important stage that requires an updated analysis and guidance from the Psychologist – return:
-[ASK_PSYHO]
-
-If the user is showing resistance, avoiding the topic, or the issue is not yet sufficiently explored – the Communicator should continue the conversation to dive deeper into the topic. In this case, return:
-[DIG_DEEPER]
-
-Always return ONLY one of these strings without any additional explanations!`;
-
-const COMMUNICATOR_PROMPT = `You are Communicator, a friendly, understanding, and supportive conversational partner in the psychological assistance system. Your task is to dive deeper into the discussed topic, helping the user open up, but without applying excessive pressure.
-
-You operate based on the latest recommendations provided by the Psychologist network and should guide the conversation accordingly.
-
-Your key principles:
-
-Be warm and understanding, creating a safe space for conversation.
-Encourage discussion, helping the user express their thoughts and emotions, but avoid digging too deep to prevent discomfort.
-If the topic gets out of control or the user shows strong resistance, gently steer the conversation back to a constructive path.
-Monitor when a topic has been fully explored and naturally transition to new aspects, updating your context with new user input.
-Your goal is to maintain a natural, supportive dialogue that helps the user explore themselves without overwhelming them.`;
-
-const PSYCHOLOGIST_ANALYSIS_PROMPT = `You are a practicing psychologist named Philip. Your task is to help users solve psychological problems by creating a support program, exploring hypotheses about their personality.
-
-Always ends your messages with Specific guidance for communicator. Don't stop before you ends the sentence.
-
-Remember that the plan you create will later be interpreted and formatted by another psychologist for conducting a specific session, to ask questions and give recommendations sequentially, it should be an instruction for them.
-
-Combine standardized tests with deep questions.
-
-1. Diagnosis and assessment phase
-1.1. Standardized screening (DSM-5/ICD-11):
-
-Anxiety:
-Use GAD-7: "How often in the last 2 weeks have you experienced anxiety that interferes with your ability to concentrate?"
-
-Depression:
-Use PHQ-9: "Have you felt a loss of interest in previously enjoyable activities?"
-
-Stress:
-Apply PSS-10: "How difficult is it for you to relax after a stressful day?"
-
-1.2. Psychoanalytic assessment:
-
-Life history research:
-Ask open-ended questions:
-"What event from childhood could have influenced your current reactions?"
-"Are there recurring conflicts in relationships?"
-
-Free associations:
-"Describe the first thing that comes to mind when you hear the word 'loneliness'?"
-
-Resistance analysis:
-"What topics do you avoid discussing? Why?"
-
-1.3. Personalization:
-
-Use the user's name (if known).
-
-Refer to previous answers:
-"Last time you mentioned sleep problems. Have you managed to find a solution?"
-
-Record unique details: interests, profession, hobbies.
-
-2. Method selection phase
-2.1. Main methods (evidence level A):
-
-Cognitive-behavioral therapy (CBT):
-Indications: Negative automatic thoughts, avoidance.
-Techniques: Thought diary, behavioral experiments.
-
-MBSR (stress reduction):
-Indications: Physical symptoms of stress.
-Techniques: Body-scan, 4-7-8 breathing.
-
-Dialectical behavior therapy (DBT):
-Indications: Impulsivity, emotional swings.
-Techniques: "Opposite action", TIPP (temperature-intense movement-pacing-progressive relaxation).
-
-2.2. Psychodynamic methods (evidence level B):
-
-Short-term psychodynamic therapy:
-Indications: Unprocessed traumas, interpersonal conflicts.
-Techniques: Transfer analysis, interpretation of defense mechanisms.
-
-Narrative therapy:
-Indications: Identity crisis, low self-efficacy.
-Techniques: Rewriting history, searching for "exceptions".
-
-You should do:
-1. Identify psychological patterns and themes
-2. Plan therapeutic conversation structure
-3. Recognize when deeper exploration is needed
-4. Determine when topics are sufficiently explored
-5. Always fill specific guidance for communicator, in the format "Communicator, ask user ..., if he ..., then ..." or "Communicator, suggest user ...".
-
-Return analysis in this format:
-# Specific guidance for communicator
-[guidance]
-## Analysis: 
-[psychological insights and patterns observed]`;
-
-const FINISHING_PROMPT = ``;
-
-const communicateWithUser = (messages: HistoryMessage[]) => {
+const communicateWithUser = async (messages: HistoryMessage[]): Promise<CommunicatorResponse> => {
   const client = getLowTierClient();
 
-  return {
-    text: '',
-  };
+  // Call the AI with proper response format setting
+  const result = await client.provider.generateResponse(
+    messages.map((m) => ({ role: m.role || 'user', content: m.text })),
+    {
+      temperature: 0.8,
+      max_tokens: 1000,
+      response_format: { type: 'json_object' },
+    },
+  );
+
+  // Parse JSON response
+  try {
+    const parsedResponse = JSON.parse(result.content) as CommunicatorResponse;
+    return parsedResponse;
+  } catch (error) {
+    console.error('Failed to parse communicator response as JSON:', error);
+    // Return fallback response if parsing fails
+    return {
+      text: result.content || "I'm not sure how to respond to that.",
+      nextAction: 'ASK_PSYCHO',
+      reason: 'Failed to generate proper response',
+    };
+  }
 };
 
-type Action = 'finish_session' | 'switch_topic' | 'deep_analyze_situation' | 'dig_context';
-
-const askPsychologist = (messages: HistoryMessage[]) => {
+const askPsychologist = async (messages: HistoryMessage[]): Promise<PsychologistResponse> => {
   const client = getHighTierClient();
 
-  return {
-    text: '',
-    action: 'dig_context' as Action,
-  };
+  // Call the AI with proper response format setting
+  const result = await client.provider.generateResponse(
+    messages.map((m) => ({ role: m.role || 'user', content: m.text })),
+    {
+      temperature: 0.9,
+      max_tokens: 1000,
+      response_format: { type: 'json_object' },
+    },
+  );
+
+  // Parse JSON response
+  try {
+    const parsedResponse = JSON.parse(result.content) as PsychologistResponse;
+    return parsedResponse;
+  } catch (error) {
+    console.error('Failed to parse psychologist response as JSON:', error);
+    // Return fallback response if parsing fails
+    return {
+      text: result.content || 'Analysis could not be completed.',
+      guidance: 'Please ask the user to provide more information about their situation.',
+      action: 'DIG_DEEPER',
+    };
+  }
 };
 
-const detectAction = (messages: HistoryMessage[]) => {
+const detectAction = async (messages: HistoryMessage[]): Promise<SwitcherResponse> => {
   const client = getLowTierClient();
 
-  const action: Action = 'dig_context';
-  const command = '';
-  const reason = '';
+  // Call the AI with proper response format setting
+  const result = await client.provider.generateResponse(
+    [
+      { role: 'system', content: SWITCHER_PROMPT },
+      ...messages.map((m) => ({ role: m.role || 'user', content: m.text })),
+    ],
+    {
+      temperature: 0.5,
+      max_tokens: 500,
+      response_format: { type: 'json_object' },
+    },
+  );
 
-  return {
-    action: action as Action,
-    command,
-    reason,
-  };
+  console.log('Switcher response:', result.content);
+
+  // Parse JSON response
+  try {
+    const parsedResponse = JSON.parse(result.content) as SwitcherResponse;
+    return parsedResponse;
+  } catch (error) {
+    console.error('Failed to parse switcher response as JSON:', error);
+    // Return fallback response if parsing fails
+    return {
+      action: 'ASK_PSYCHO',
+      reason: 'Failed to determine next action',
+    };
+  }
 };
 
-const proceedWithText = (context: ConversationContext, text: string) => {
-  let { action, reason, command } = detectAction(context.history);
+const finishSession = async (messages: HistoryMessage[]): Promise<FinishingResponse> => {
+  const client = getHighTierClient();
 
-  if (action === 'deep_analyze_situation') {
+  // Call the AI with proper response format setting
+  const result = await client.provider.generateResponse(
+    [
+      { role: 'system', content: FINISHING_PROMPT },
+      ...messages.map((m) => ({ role: m.role || 'user', content: m.text })),
+    ],
+    {
+      temperature: 0.6,
+      max_tokens: 1500,
+      response_format: { type: 'json_object' },
+    },
+  );
+
+  // Parse JSON response
+  try {
+    const parsedResponse = JSON.parse(result.content) as FinishingResponse;
+    return parsedResponse;
+  } catch (error) {
+    console.error('Failed to parse finishing response as JSON:', error);
+    // Return fallback response if parsing fails
+    return {
+      text: result.content || 'Thank you for your time today.',
+      recommendations: 'Consider practicing self-care regularly.',
+      nextSteps: 'Feel free to schedule another session if needed.',
+      action: 'FINISH_SESSION',
+      reason: 'Failed to generate proper closing response',
+    };
+  }
+};
+
+export const proceedWithText = async (context: ConversationContext, typingHandler: () => void) => {
+  // First, detect what action to take
+  typingHandler();
+  const { action, reason } = await detectAction(context.history);
+
+  let psychoActions;
+
+  if (action === 'ASK_PSYCHO') {
     const fullContext = `The history of the conversation:
       ${context.history.map((h) => `${h.from}: ${h.text}`).join('\n')}`;
 
-    const plan = askPsychologist([
+    typingHandler();
+    // Get analysis from psychologist
+    const plan = await askPsychologist([
       {
         text: PSYCHOLOGIST_ANALYSIS_PROMPT,
         role: 'system',
@@ -161,52 +154,28 @@ const proceedWithText = (context: ConversationContext, text: string) => {
         role: 'system',
       },
       {
-        text: `${action};\n The reason for it: ${reason}`,
+        text: `Please help me with this user situation;\n The reason for it: ${reason}`,
         role: 'user',
       },
     ]);
 
     context.history.push({
       from: 'psychologist',
-      text: plan.text,
+      text: `Please follow the guidance:
+        ${plan.guidance};
+        ${plan.text};
+      `,
     });
 
-    action = plan.action;
+    psychoActions = plan.action;
   }
 
-  if (action === 'dig_context') {
-    const latestAnaliticMessage = context.history
-      .reverse()
-      .find((message) => message.from === 'psychologist');
-
-    const communicatorContext = `The history of the conversation:
-      ${context.history.filter((message) => message.from !== 'psychologist').join('\n')}
-      The latest analysis from the psychologist:
-      ${latestAnaliticMessage}`;
-
-    const response = communicateWithUser([
-      {
-        text: COMMUNICATOR_PROMPT,
-        role: 'system',
-      },
-      {
-        text: communicatorContext,
-        role: 'system',
-      },
-      {
-        text: `${action};\n The reason for it: ${reason}`,
-        role: 'user',
-      },
-    ]);
-
-    return [response.text];
-  }
-
-  if (action === 'finish_session') {
+  if (psychoActions === 'FINISH_SESSION' || action === 'APPOINT_NEXT_SESSION') {
     const fullContext = `The history of the conversation:
       ${context.history.map((h) => `${h.from}: ${h.text}`).join('\n')}`;
 
-    const finishing = askPsychologist([
+    typingHandler();
+    const finishing = await finishSession([
       {
         text: FINISHING_PROMPT,
         role: 'system',
@@ -226,8 +195,39 @@ const proceedWithText = (context: ConversationContext, text: string) => {
       text: finishing.text,
     });
 
-    return [finishing.text];
+    typingHandler();
+
+    psychoActions = finishing.action;
   }
 
-  return {};
+  const latestAnalyticMessage = context.history
+    .filter((message) => message.from === 'psychologist')
+    .pop();
+
+  const communicatorContext = `The history of the conversation:
+      ${context.history
+        .filter((message) => message.from !== 'psychologist')
+        .map((m) => `${m.from}: ${m.text}`)
+        .join('\n')}
+      ${latestAnalyticMessage ? `The latest analysis from the psychologist: ${latestAnalyticMessage.text}` : ''}`;
+
+  typingHandler();
+  // Get response from communicator
+  const response = await communicateWithUser([
+    {
+      text: COMMUNICATOR_PROMPT,
+      role: 'system',
+    },
+    {
+      text: communicatorContext,
+      role: 'system',
+    },
+    {
+      text: `${psychoActions || action};\n The reason for it: ${reason}`,
+      role: 'user',
+    },
+  ]);
+
+  typingHandler();
+  return [response.text];
 };

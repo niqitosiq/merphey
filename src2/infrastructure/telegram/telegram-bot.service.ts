@@ -1,6 +1,8 @@
 import { Telegraf } from 'telegraf';
 import { config } from '../config';
 import { UserSessionRepository } from '../../domain/repositories/user-session.repository';
+import { proceedWithText } from '../../domain/services/main.service';
+import { HistoryMessage } from '../../domain/entities/conversation';
 
 export class TelegramBotService {
   public bot: Telegraf;
@@ -16,17 +18,15 @@ export class TelegramBotService {
     // Start command handler
     this.bot.command('start', async (ctx) => {
       const userId = ctx.from.id.toString();
-      const greeting = this.communicator.startConversation(userId);
       this.sessionRepository.create({ userId });
-      await ctx.reply(greeting);
+      await ctx.reply('прив че дел');
     });
 
     // Reset conversation command
     this.bot.command('reset', async (ctx) => {
       const userId = ctx.from.id.toString();
-      const greeting = this.communicator.startConversation(userId);
       this.sessionRepository.create({ userId });
-      await ctx.reply(greeting);
+      await ctx.reply('ты че?');
     });
 
     // Help command
@@ -44,13 +44,42 @@ export class TelegramBotService {
       const userId = ctx.from.id.toString();
       const message = ctx.message.text;
 
-      try {
-        await ctx.sendChatAction('typing');
-      } catch (error: any) {
+      const session = await this.sessionRepository.findByUserId(userId);
+
+      session?.history.push({
+        text: message,
+        from: 'user',
+        role: 'user',
+      });
+      console.info(`Received message from user ${userId}: ${message}; ${JSON.stringify(session)}`);
+
+      if (!session) {
         await ctx.reply(
-          'Извините, произошла ошибка. Пожалуйста, попробуйте позже или начните новую беседу с помощью команды /reset',
+          'Извините, произошла ошибка. Пожалуйста, начните новую беседу с помощью команды /start',
         );
+        return;
       }
+
+      const typingHandler = ctx.sendChatAction.bind(ctx, 'typing');
+
+      const messages = await proceedWithText(session, typingHandler);
+
+      session.history.push(
+        ...messages.map(
+          (text) =>
+            ({
+              from: 'communicator',
+              role: 'assistant',
+              text,
+            }) as HistoryMessage,
+        ),
+      );
+
+      await this.sessionRepository.update(session);
+
+      messages.forEach(async (message) => {
+        await ctx.reply(message);
+      });
     });
   }
 
