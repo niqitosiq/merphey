@@ -208,10 +208,11 @@ export const proceedWithText = async (context: ConversationContext, typingHandle
       ${context.history
         .filter((message) => message.from !== 'psychologist')
         .map((m) => `${m.from}: ${m.text}`)
-        .join('\n')}
-      ${latestAnalyticMessage ? `The latest analysis from the psychologist: ${latestAnalyticMessage.text}` : ''}`;
+        .join('\n')}`;
 
   typingHandler();
+
+  const hasPsycho = psychoActions !== undefined;
   // Get response from communicator
   const response = await communicateWithUser([
     {
@@ -223,7 +224,13 @@ export const proceedWithText = async (context: ConversationContext, typingHandle
       role: 'system',
     },
     {
-      text: `${psychoActions || action};\n The reason for it: ${reason}`,
+      text: latestAnalyticMessage?.text || 'no analysis',
+      role: 'system',
+    },
+    {
+      text: hasPsycho
+        ? `follow the guidance from the psychologist`
+        : `${action}; \n The reason for it: ${reason}`,
       role: 'user',
     },
   ]);
