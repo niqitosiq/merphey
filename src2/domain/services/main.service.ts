@@ -162,27 +162,6 @@ const triggerDeepThink = async (
     ${plan.guidance};
     ${plan.text};`,
   });
-
-  const communicatorContext = `The history of the conversation:
-      ${context.history.map((m) => `[${m.from}]: "${m.text}"`).join('\n')}`;
-
-  // Get response from communicator
-  const response = await communicateWithUser([
-    {
-      text: COMMUNICATOR_PROMPT,
-      role: 'system',
-    },
-    {
-      text: communicatorContext,
-      role: 'system',
-    },
-    {
-      text: `The analysis is ready now, make a smooth transition to question from the guidance. If you have the same message in the context, relate to it and provide details, instead of writing about the same.`,
-      role: 'user',
-    },
-  ]);
-
-  reply(response.text);
 };
 
 export const proceedWithText = async (
@@ -201,7 +180,7 @@ export const proceedWithText = async (
     triggerDeepThink(context, action, pushHistory, reply);
     pushHistory({
       from: 'psychologist',
-      text: `I'm working on the analysis. Proceed with the previous analysis and try to keep user engaged, before I will finish it.`,
+      text: `I'm working on the analysis. Proceed with the previous analysis and try to keep user engaged, before I will finish it. Main theme will be changed soon, be ready for it.`,
     });
   }
 
