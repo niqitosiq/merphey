@@ -42,31 +42,9 @@ export class UserSessionFactory {
 export class UserSessionManager {
   userId: string;
   state: ConversationState;
-  problemStatement: string;
-  analyzedProblem: string;
-  questionsAndAnswers: QuestionAnswer[];
-  finalAnalysis: string;
-  points: string[];
-
-  previousAnswers: Record<string, string>;
-  conversationCompleted: boolean;
-
-  // Properties for conversation context and depth tracking
-  conversationHistory: Array<{ role: string; content: string }>;
-  currentQuestionExchanges: number;
 
   constructor(userId: string) {
     this.userId = userId;
     this.state = ConversationState.IDLE;
-  }
-
-  setFinalAnalysis(analysis: string): void {
-    this.finalAnalysis = analysis;
-    this.state = ConversationState.IDLE;
-  }
-
-  reset(): void {
-    this.state = ConversationState.IDLE;
-    this.conversationHistory = [];
   }
 }

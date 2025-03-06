@@ -13,7 +13,7 @@ If the dialogue between the Communicator and the user has reached a critical poi
 - The conversation has shifted to a completely new topic not covered by previous analyses
 - The Communicator has exhausted their ability to productively engage with the current topic
 - Previous communication strategies are clearly not working 
-- Ask for the analysis if it is not in progress yet. If it is in progress, relate to it and provide details.
+- Ask for the analysis only if the latest message from the psychologist doesn't demonstrate that analysis is in progress. If it is in progress, relate to it and provide details.
 
 If the user's issue is not yet sufficiently explored, choose "DIG_DEEPER". This is the preferred default action unless there are strong indicators for the other options. Choose this when:
 - The user is showing resistance or avoiding topics
