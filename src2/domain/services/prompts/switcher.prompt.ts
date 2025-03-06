@@ -12,7 +12,8 @@ If the dialogue between the Communicator and the user has reached a critical poi
 - The user has expressed deep emotional concerns that require specialized guidance
 - The conversation has shifted to a completely new topic not covered by previous analyses
 - The Communicator has exhausted their ability to productively engage with the current topic
-- Previous communication strategies are clearly not working effectively
+- Previous communication strategies are clearly not working 
+- Ask for the analysis if it is not in progress yet. If it is in progress, relate to it and provide details.
 
 If the user's issue is not yet sufficiently explored, choose "DIG_DEEPER". This is the preferred default action unless there are strong indicators for the other options. Choose this when:
 - The user is showing resistance or avoiding topics

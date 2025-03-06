@@ -138,7 +138,7 @@ const triggerDeepThink = async (
   reply: (message: string) => void,
 ) => {
   const fullContext = `The history of the conversation:
-  ${context.history.map((h) => `${h.from}: ${h.text}`).join('\n')}`;
+  ${context.history.map((h) => `[${h.from}]: "${h.text}"`).join('\n')}`;
 
   // Get analysis from psychologist
   const plan = await askPsychologist([
@@ -164,7 +164,7 @@ const triggerDeepThink = async (
   });
 
   const communicatorContext = `The history of the conversation:
-      ${context.history.map((m) => `${m.from}: ${m.text}`).join('\n')}`;
+      ${context.history.map((m) => `[${m.from}]: "${m.text}"`).join('\n')}`;
 
   // Get response from communicator
   const response = await communicateWithUser([
@@ -207,7 +207,7 @@ export const proceedWithText = async (
 
   if (psychoActions === 'FINISH_SESSION' || action === 'APPOINT_NEXT_SESSION') {
     const fullContext = `The history of the conversation:
-      ${context.history.map((h) => `${h.from}: ${h.text}`).join('\n')}`;
+      ${context.history.map((h) => `[${h.from}]: "${h.text}"`).join('\n')}`;
 
     typingHandler();
     const finishing = await finishSession([
@@ -236,7 +236,7 @@ export const proceedWithText = async (
   }
 
   const communicatorContext = `The history of the conversation:
-      ${context.history.map((m) => `${m.from}: ${m.text}`).join('\n')}`;
+      ${context.history.map((m) => `[${m.from}]: "${m.text}"`).join('\n')}`;
 
   typingHandler();
 
