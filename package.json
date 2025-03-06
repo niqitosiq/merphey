@@ -13,9 +13,6 @@
     "test": "jest",
     "check-types": "tsc --noEmit",
     "validate": "npm run lint && npm run check-types",
-    "clean": "rimraf dist",
-    "prebuild": "npm run clean",
-    "prepare": "npm run build",
     "start:prod": "NODE_ENV=production node dist/index.js"
   },
   "keywords": [
