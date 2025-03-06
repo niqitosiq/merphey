@@ -10,7 +10,10 @@ export class TelegramBotService {
   private readonly sessionRepository: UserSessionRepository;
 
   constructor(sessionRepository: UserSessionRepository) {
-    this.bot = new Telegraf(config.telegram.botToken, { handlerTimeout: 5 * 60 * 1000 , telegram:{webhookReply: false}});
+    this.bot = new Telegraf(config.telegram.botToken, {
+      handlerTimeout: 5 * 60 * 1000,
+      telegram: { webhookReply: false },
+    });
     this.sessionRepository = sessionRepository;
     this.setupHandlers();
   }
@@ -62,8 +65,13 @@ export class TelegramBotService {
       }
 
       const typingHandler = ctx.sendChatAction.bind(ctx, 'typing');
+      const pushHistory = (message: HistoryMessage) => {
+        session.history.push(message);
+        this.sessionRepository.update(session);
+      };
+      const reply = (message: string) => ctx.reply(message);
 
-      const messages = await proceedWithText(session, typingHandler);
+      const messages = await proceedWithText(session, pushHistory, typingHandler, reply);
 
       session.history.push(
         ...messages.map(

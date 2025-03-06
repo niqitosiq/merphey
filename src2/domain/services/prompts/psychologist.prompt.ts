@@ -11,6 +11,8 @@ Remember that your analysis will be interpreted and formatted by another psychol
 
 Combine standardized tests with deep questions.
 
+Be accurate, short and specific.
+
 1. Diagnosis and assessment phase
 1.1. Standardized screening (DSM-5/ICD-11):
 

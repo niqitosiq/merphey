@@ -131,7 +131,66 @@ const finishSession = async (messages: HistoryMessage[]): Promise<FinishingRespo
   }
 };
 
-export const proceedWithText = async (context: ConversationContext, typingHandler: () => void) => {
+const triggerDeepThink = async (
+  context: ConversationContext,
+  reason: string,
+  pushHistory: (message: HistoryMessage) => void,
+  reply: (message: string) => void,
+) => {
+  const fullContext = `The history of the conversation:
+  ${context.history.map((h) => `${h.from}: ${h.text}`).join('\n')}`;
+
+  // Get analysis from psychologist
+  const plan = await askPsychologist([
+    {
+      text: PSYCHOLOGIST_ANALYSIS_PROMPT,
+      role: 'system',
+    },
+    {
+      text: fullContext,
+      role: 'system',
+    },
+    {
+      text: `Please help me with this user situation;\n The reason for it: ${reason}`,
+      role: 'user',
+    },
+  ]);
+
+  pushHistory({
+    from: 'psychologist',
+    text: `Please follow the guidance:
+    ${plan.guidance};
+    ${plan.text};`,
+  });
+
+  const communicatorContext = `The history of the conversation:
+      ${context.history.map((m) => `${m.from}: ${m.text}`).join('\n')}`;
+
+  // Get response from communicator
+  const response = await communicateWithUser([
+    {
+      text: COMMUNICATOR_PROMPT,
+      role: 'system',
+    },
+    {
+      text: communicatorContext,
+      role: 'system',
+    },
+    {
+      text: `The analysis is ready now, make a smooth transition to question from the guidance. If you have the same message in the context, relate to it and provide details, instead of writing about the same.`,
+      role: 'user',
+    },
+  ]);
+
+  reply(response.text);
+};
+
+export const proceedWithText = async (
+  context: ConversationContext,
+  pushHistory: (message: HistoryMessage) => void,
+  typingHandler: () => void,
+  reply: (message: string) => void,
+) => {
   // First, detect what action to take
   typingHandler();
   const { action, reason } = await detectAction(context.history);
@@ -139,35 +198,11 @@ export const proceedWithText = async (context: ConversationContext, typingHandle
   let psychoActions;
 
   if (action === 'ASK_PSYCHO') {
-    const fullContext = `The history of the conversation:
-      ${context.history.map((h) => `${h.from}: ${h.text}`).join('\n')}`;
-
-    typingHandler();
-    // Get analysis from psychologist
-    const plan = await askPsychologist([
-      {
-        text: PSYCHOLOGIST_ANALYSIS_PROMPT,
-        role: 'system',
-      },
-      {
-        text: fullContext,
-        role: 'system',
-      },
-      {
-        text: `Please help me with this user situation;\n The reason for it: ${reason}`,
-        role: 'user',
-      },
-    ]);
-
-    context.history.push({
+    triggerDeepThink(context, action, pushHistory, reply);
+    pushHistory({
       from: 'psychologist',
-      text: `Please follow the guidance:
-        ${plan.guidance};
-        ${plan.text};
-      `,
+      text: `I'm working on the analysis. Proceed with the previous analysis and try to keep user engaged, before I will finish it.`,
     });
-
-    psychoActions = plan.action;
   }
 
   if (psychoActions === 'FINISH_SESSION' || action === 'APPOINT_NEXT_SESSION') {
@@ -190,7 +225,7 @@ export const proceedWithText = async (context: ConversationContext, typingHandle
       },
     ]);
 
-    context.history.push({
+    pushHistory({
       from: 'psychologist',
       text: finishing.text,
     });
@@ -200,15 +235,8 @@ export const proceedWithText = async (context: ConversationContext, typingHandle
     psychoActions = finishing.action;
   }
 
-  const latestAnalyticMessage = context.history
-    .filter((message) => message.from === 'psychologist')
-    .pop();
-
   const communicatorContext = `The history of the conversation:
-      ${context.history
-        .filter((message) => message.from !== 'psychologist')
-        .map((m) => `${m.from}: ${m.text}`)
-        .join('\n')}`;
+      ${context.history.map((m) => `${m.from}: ${m.text}`).join('\n')}`;
 
   typingHandler();
 
@@ -224,13 +252,7 @@ export const proceedWithText = async (context: ConversationContext, typingHandle
       role: 'system',
     },
     {
-      text: `Ananlysis from psycologist: ${latestAnalyticMessage?.text || 'no analysis'}`,
-      role: 'system',
-    },
-    {
-      text: hasPsycho
-        ? `follow the guidance from the psychologist`
-        : `${action}; \n The reason for it: ${reason}`,
+      text: `Proceed with the user. The reason for it: ${reason}`,
       role: 'user',
     },
   ]);
