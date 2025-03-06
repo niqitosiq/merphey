@@ -21,6 +21,7 @@ If the user's issue is not yet sufficiently explored, choose "DIG_DEEPER". This 
 - The conversation is progressing naturally but needs more depth
 - The user is gradually opening up and could benefit from continued dialogue
 - Current communication strategies are working effectively
+- Create the "Reason" in the user's language and relate to the context.
 
 If you don't have analysis, then get the first analysis from the Psychologist after the 2 cycles of conversation.
 
