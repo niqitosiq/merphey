@@ -3,7 +3,7 @@ import { TelegramBotService } from './infrastructure/telegram/telegram-bot.servi
 
 async function bootstrap() {
   const startTime = Date.now();
-
+  console.info('Bootstraping v2')
   try {
     // Initialize base services
     const sessionRepository = new UserSessionRepositoryImpl();
