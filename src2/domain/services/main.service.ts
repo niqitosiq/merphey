@@ -224,7 +224,7 @@ export const proceedWithText = async (context: ConversationContext, typingHandle
       role: 'system',
     },
     {
-      text: latestAnalyticMessage?.text || 'no analysis',
+      text: `Ananlysis from psycologist: ${latestAnalyticMessage?.text || 'no analysis'}`,
       role: 'system',
     },
     {
