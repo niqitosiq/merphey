@@ -2,8 +2,10 @@ import OpenAI from 'openai';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { ChatCompletionMessageParam } from 'openai/resources';
 import { config } from '../config';
+import { pipe } from 'fp-ts/function';
+import * as O from 'fp-ts/Option';
 
-interface AIOptions {
+export interface AIOptions {
   temperature: number;
   max_tokens: number;
   response_format?: { type: 'json_object' | 'text' };
@@ -61,25 +63,66 @@ class GeminiProvider {
   }
 }
 
+type Provider = OpenAIProvider | GeminiProvider;
+type ProviderType = 'openai' | 'gemini';
+
 interface AIClient {
-  provider: OpenAIProvider | GeminiProvider;
+  provider: Provider;
 }
 
-const getAIProvider = (provider: 'openai' | 'gemini' = config.ai.provider, model?: string) => {
-  if (provider === 'openai') {
-    return new OpenAIProvider(model);
-  }
-  return new GeminiProvider(model);
-};
+const isOpenAIProvider = (provider: ProviderType): boolean => provider === 'openai';
+const isGeminiProvider = (provider: ProviderType): boolean => provider === 'gemini';
 
-export const getLowTierClient = (): AIClient => {
-  return {
-    provider: getAIProvider('openai', 'google/gemini-2.0-flash-001'),
-  };
-};
+const createOpenAIProvider = (model?: string): O.Option<OpenAIProvider> =>
+  pipe(
+    O.some(new OpenAIProvider(model)),
+    O.map((provider) => {
+      console.log('Created OpenAI provider with model:', model);
+      return provider;
+    }),
+  );
 
-export const getHighTierClient = (): AIClient => {
-  return {
-    provider: getAIProvider('openai', 'deepseek/deepseek-r1'),
-  };
-};
+const createGeminiProvider = (model?: string): O.Option<GeminiProvider> =>
+  pipe(
+    O.some(new GeminiProvider(model)),
+    O.map((provider) => {
+      console.log('Created Gemini provider with model:', model);
+      return provider;
+    }),
+  );
+
+const getAIProvider = (
+  provider: ProviderType = config.ai.provider,
+  model?: string,
+): O.Option<Provider> =>
+  pipe(
+    O.of(provider),
+    O.chain((p): O.Option<Provider> => {
+      if (isOpenAIProvider(p)) {
+        return pipe(
+          createOpenAIProvider(model),
+          O.map((provider): Provider => provider),
+        );
+      }
+      return pipe(
+        createGeminiProvider(model),
+        O.map((provider): Provider => provider),
+      );
+    }),
+  );
+
+const createFallbackProvider = (model: string): Provider => new OpenAIProvider(model);
+
+export const getLowTierClient = (): AIClient => ({
+  provider: pipe(
+    getAIProvider('openai', 'google/gemini-2.0-flash-001'),
+    O.getOrElse(() => createFallbackProvider('google/gemini-2.0-flash-001')),
+  ),
+});
+
+export const getHighTierClient = (): AIClient => ({
+  provider: pipe(
+    getAIProvider('openai', 'deepseek/deepseek-r1'),
+    O.getOrElse(() => createFallbackProvider('deepseek/deepseek-r1')),
+  ),
+});

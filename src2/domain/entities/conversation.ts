@@ -1,9 +1,10 @@
-export type HistoryMessage = {
-  from?: 'psychologist' | 'user' | 'communicator' | 'proceeder';
-  role?: 'system' | 'user' | 'assistant';
+export interface HistoryMessage {
   text: string;
-};
+  from?: string;
+  role?: string;
+}
 
 export interface ConversationContext {
   history: HistoryMessage[];
+  isThinking?: boolean;
 }

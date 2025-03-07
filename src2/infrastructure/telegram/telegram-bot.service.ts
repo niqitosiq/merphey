@@ -2,7 +2,7 @@ import { Telegraf } from 'telegraf';
 import { message } from 'telegraf/filters';
 import { config } from '../config';
 import { UserSessionRepository } from '../../domain/repositories/user-session.repository';
-import { proceedWithText } from '../../domain/services/main.service';
+import { proceedWithText, proceedWithTextSimple } from '../../domain/services/main.service';
 import { HistoryMessage } from '../../domain/entities/conversation';
 
 export class TelegramBotService {
@@ -65,13 +65,13 @@ export class TelegramBotService {
       }
 
       const typingHandler = ctx.sendChatAction.bind(ctx, 'typing');
-      const pushHistory = (message: HistoryMessage) => {
+      const pushHistory = async (message: HistoryMessage) => {
         session.history.push(message);
-        this.sessionRepository.update(session);
+        await this.sessionRepository.update(session);
       };
       const reply = (message: string) => ctx.reply(message);
 
-      const messages = await proceedWithText(session, pushHistory, typingHandler, reply);
+      const messages = await proceedWithTextSimple(session, pushHistory, typingHandler, reply);
 
       session.history.push(
         ...messages.map(

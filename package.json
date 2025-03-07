@@ -29,6 +29,7 @@
     "@types/node-cache": "^4.2.5",
     "csv-string": "^4.1.1",
     "dotenv": "^16.4.7",
+    "fp-ts": "^2.16.9",
     "node-cache": "^5.1.2",
     "openai": "^4.86.1",
     "telegraf": "^4.15.0"

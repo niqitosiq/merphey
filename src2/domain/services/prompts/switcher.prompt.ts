@@ -1,5 +1,5 @@
 export interface SwitcherResponse {
-  action: 'APPOINT_NEXT_SESSION' | 'ASK_PSYCHO' | 'DIG_DEEPER';
+  action: 'APPOINT_NEXT_SESSION' | 'ASK_PSYCHO' | 'DIG_DEEPER' | 'FINISH_SESSION';
   reason: string;
 }
 

@@ -1,241 +1,169 @@
-import {
-  getHighTierClient,
-  getLowTierClient,
-} from '../../infrastructure/llm/conversation-processors';
+import { pipe } from 'fp-ts/function';
+import * as TE from 'fp-ts/TaskEither';
+import * as O from 'fp-ts/Option';
 import { ConversationContext, HistoryMessage } from '../entities/conversation';
+import { PSYCHOLOGIST_ANALYSIS_PROMPT } from './prompts/psychologist.prompt';
+import { COMMUNICATOR_PROMPT } from './prompts/communicator.prompt';
+import { HistoryPusher, TypingIndicator, UserReply, formatConversationHistory } from './types';
+import {
+  askPsychologist,
+  communicateWithUser,
+  detectAction,
+  finishSession,
+} from './conversation-services';
 
-// Import prompts and their types from separate files
-import { SWITCHER_PROMPT, SwitcherResponse } from './prompts/switcher.prompt';
-import { COMMUNICATOR_PROMPT, CommunicatorResponse } from './prompts/communicator.prompt';
-import { PSYCHOLOGIST_ANALYSIS_PROMPT, PsychologistResponse } from './prompts/psychologist.prompt';
-import { FINISHING_PROMPT, FinishingResponse } from './prompts/finishing.prompt';
+const isAskPsycho = (action: string): boolean => action === 'ASK_PSYCHO';
+const isSessionEnding = (action: string): boolean =>
+  action === 'FINISH_SESSION' || action === 'APPOINT_NEXT_SESSION';
 
-const communicateWithUser = async (messages: HistoryMessage[]): Promise<CommunicatorResponse> => {
-  const client = getLowTierClient();
-
-  // Call the AI with proper response format setting
-  const result = await client.provider.generateResponse(
-    messages.map((m) => ({ role: m.role || 'user', content: m.text })),
-    {
-      temperature: 0.8,
-      max_tokens: 1000,
-      response_format: { type: 'json_object' },
-    },
-  );
-
-  // Parse JSON response
-  try {
-    const parsedResponse = JSON.parse(result.content) as CommunicatorResponse;
-    return parsedResponse;
-  } catch (error) {
-    console.error('Failed to parse communicator response as JSON:', error);
-    // Return fallback response if parsing fails
-    return {
-      text: result.content || "I'm not sure how to respond to that.",
-      nextAction: 'ASK_PSYCHO',
-      reason: 'Failed to generate proper response',
-    };
-  }
-};
-
-const askPsychologist = async (messages: HistoryMessage[]): Promise<PsychologistResponse> => {
-  const client = getHighTierClient();
-
-  // Call the AI with proper response format setting
-  const result = await client.provider.generateResponse(
-    messages.map((m) => ({ role: m.role || 'user', content: m.text })),
-    {
-      temperature: 0.9,
-      max_tokens: 1000,
-      response_format: { type: 'json_object' },
-    },
-  );
-
-  // Parse JSON response
-  try {
-    const parsedResponse = JSON.parse(result.content) as PsychologistResponse;
-    return parsedResponse;
-  } catch (error) {
-    console.error('Failed to parse psychologist response as JSON:', error);
-    // Return fallback response if parsing fails
-    return {
-      text: result.content || 'Analysis could not be completed.',
-      guidance: 'Please ask the user to provide more information about their situation.',
-      action: 'DIG_DEEPER',
-    };
-  }
-};
-
-const detectAction = async (messages: HistoryMessage[]): Promise<SwitcherResponse> => {
-  const client = getLowTierClient();
-
-  // Call the AI with proper response format setting
-  const result = await client.provider.generateResponse(
-    [
-      { role: 'system', content: SWITCHER_PROMPT },
-      ...messages.map((m) => ({ role: m.role || 'user', content: m.text })),
-    ],
-    {
-      temperature: 0.5,
-      max_tokens: 500,
-      response_format: { type: 'json_object' },
-    },
-  );
-
-  console.log('Switcher response:', result.content);
-
-  // Parse JSON response
-  try {
-    const parsedResponse = JSON.parse(result.content) as SwitcherResponse;
-    return parsedResponse;
-  } catch (error) {
-    console.error('Failed to parse switcher response as JSON:', error);
-    // Return fallback response if parsing fails
-    return {
-      action: 'ASK_PSYCHO',
-      reason: 'Failed to determine next action',
-    };
-  }
-};
-
-const finishSession = async (messages: HistoryMessage[]): Promise<FinishingResponse> => {
-  const client = getHighTierClient();
-
-  // Call the AI with proper response format setting
-  const result = await client.provider.generateResponse(
-    [
-      { role: 'system', content: FINISHING_PROMPT },
-      ...messages.map((m) => ({ role: m.role || 'user', content: m.text })),
-    ],
-    {
-      temperature: 0.6,
-      max_tokens: 1500,
-      response_format: { type: 'json_object' },
-    },
-  );
-
-  // Parse JSON response
-  try {
-    const parsedResponse = JSON.parse(result.content) as FinishingResponse;
-    return parsedResponse;
-  } catch (error) {
-    console.error('Failed to parse finishing response as JSON:', error);
-    // Return fallback response if parsing fails
-    return {
-      text: result.content || 'Thank you for your time today.',
-      recommendations: 'Consider practicing self-care regularly.',
-      nextSteps: 'Feel free to schedule another session if needed.',
-      action: 'FINISH_SESSION',
-      reason: 'Failed to generate proper closing response',
-    };
-  }
-};
-
-const triggerDeepThink = async (
+const triggerDeepThink = (
   context: ConversationContext,
   reason: string,
-  pushHistory: (message: HistoryMessage) => void,
-  reply: (message: string) => void,
-) => {
+  pushHistory: HistoryPusher,
+): TE.TaskEither<Error, string> => {
   const fullContext = `The history of the conversation:
-  ${context.history.map((h) => `[${h.from}]: "${h.text}"`).join('\n')}`;
+  ${formatConversationHistory(context.history)}`;
 
-  // Get analysis from psychologist
-  const plan = await askPsychologist([
-    {
-      text: PSYCHOLOGIST_ANALYSIS_PROMPT,
-      role: 'system',
-    },
-    {
-      text: fullContext,
-      role: 'system',
-    },
-    {
-      text: `Please help me with this user situation;\n The reason for it: ${reason}`,
-      role: 'user',
-    },
-  ]);
-
-  pushHistory({
-    from: 'psychologist',
-    text: `Please follow the guidance:
-    ${plan.guidance};
-    ${plan.text};`,
-  });
-};
-
-export const proceedWithText = async (
-  context: ConversationContext,
-  pushHistory: (message: HistoryMessage) => void,
-  typingHandler: () => void,
-  reply: (message: string) => void,
-) => {
-  // First, detect what action to take
-  typingHandler();
-  const { action, reason } = await detectAction(context.history);
-
-  let psychoActions;
-
-  if (action === 'ASK_PSYCHO') {
-    triggerDeepThink(context, action, pushHistory, reply);
-    pushHistory({
-      from: 'psychologist',
-      text: `I'm working on the analysis. Proceed with the previous analysis and try to keep user engaged, before I will finish it. Main theme will be changed soon, be ready for it.`,
-    });
-  }
-
-  if (psychoActions === 'FINISH_SESSION' || action === 'APPOINT_NEXT_SESSION') {
-    const fullContext = `The history of the conversation:
-      ${context.history.map((h) => `[${h.from}]: "${h.text}"`).join('\n')}`;
-
-    typingHandler();
-    const finishing = await finishSession([
+  return pipe(
+    askPsychologist([
+      { text: PSYCHOLOGIST_ANALYSIS_PROMPT, role: 'system' },
+      { text: fullContext, role: 'system' },
       {
-        text: FINISHING_PROMPT,
-        role: 'system',
-      },
-      {
-        text: fullContext,
-        role: 'system',
-      },
-      {
-        text: `Finish the session`,
+        text: `Please help me with this user situation;\n The reason for it: ${reason}`,
         role: 'user',
       },
-    ]);
+    ]),
+    TE.map((plan) => {
+      pushHistory({
+        from: 'psychologist',
+        text: `Please follow the guidance:
+        ${plan.guidance};
+        ${plan.text};`,
+      });
+      context.isThinking = false;
+      return reason;
+    }),
+  );
+};
 
-    pushHistory({
-      from: 'psychologist',
-      text: finishing.text,
-    });
+const handleFinishingSession = (
+  context: ConversationContext,
+  pushHistory: HistoryPusher,
+  typingHandler: TypingIndicator,
+): TE.TaskEither<Error, string> => {
+  const fullContext = `The history of the conversation:
+    ${formatConversationHistory(context.history)}`;
 
-    typingHandler();
+  return pipe(
+    finishSession([
+      { text: fullContext, role: 'system' },
+      { text: `Finish the session`, role: 'user' },
+    ]),
+    TE.map((finishing) => {
+      pushHistory({
+        from: 'psychologist',
+        text: finishing.text,
+      });
+      return finishing.action;
+    }),
+  );
+};
 
-    psychoActions = finishing.action;
-  }
+const handleActionResponse = (
+  action: string,
+  reason: string,
+  context: ConversationContext,
+  pushHistory: HistoryPusher,
+): TE.TaskEither<Error, string> =>
+  pipe(
+    O.fromPredicate(isAskPsycho)(action),
+    O.chain(() =>
+      pipe(
+        O.fromNullable(context.isThinking),
+        O.fold(
+          // If not thinking, start thinking
+          () => O.some(true),
+          // If already thinking, return none to skip
+          (isThinking) => (isThinking ? O.none : O.some(true)),
+        ),
+      ),
+    ),
+    O.map(() => {
+      context.isThinking = true;
+      triggerDeepThink(context, action, pushHistory)();
 
-  const communicatorContext = `The history of the conversation:
-      ${context.history.map((m) => `[${m.from}]: "${m.text}"`).join('\n')}`;
+      pushHistory({
+        from: 'psychologist',
+        text: `I'm working on the analysis. Tell user that you need to think deeper, and proceed with existing guidance from the history, focus on other tasks meanwhile.`,
+      });
 
+      return TE.right(action);
+    }),
+    O.getOrElse(() => {
+      if (context.isThinking) {
+        pushHistory({
+          from: 'psychologist',
+          text: `I'm still analyzing the previous context. Let's continue with our current discussion while I process that.`,
+        });
+      }
+      return TE.right(action);
+    }),
+  );
+
+export const proceedWithText = (
+  context: ConversationContext,
+  pushHistory: HistoryPusher,
+  typingHandler: TypingIndicator,
+  reply: UserReply,
+): TE.TaskEither<Error, string[]> => {
   typingHandler();
 
-  const hasPsycho = psychoActions !== undefined;
-  // Get response from communicator
-  const response = await communicateWithUser([
-    {
-      text: COMMUNICATOR_PROMPT,
-      role: 'system',
-    },
-    {
-      text: communicatorContext,
-      role: 'system',
-    },
-    {
-      text: `Proceed with the user. The reason for it: ${reason}`,
-      role: 'user',
-    },
-  ]);
+  return pipe(
+    detectAction(context.history),
+    TE.chain(({ action, reason }) => handleActionResponse(action, reason, context, pushHistory)),
+    TE.chain((action) =>
+      pipe(
+        O.fromPredicate(isSessionEnding)(action),
+        O.map(() => handleFinishingSession(context, pushHistory, typingHandler)),
+        O.getOrElse(() => TE.right(action)),
+      ),
+    ),
+    TE.chain(() => {
+      typingHandler();
+      const communicatorContext = `The history of the conversation:
+        ${formatConversationHistory(context.history)}`;
 
-  typingHandler();
-  return [response.text];
+      return pipe(
+        communicateWithUser([
+          { text: COMMUNICATOR_PROMPT, role: 'system' },
+          { text: communicatorContext, role: 'system' },
+          {
+            text: `Proceed with the user, using the latest guidance from psychologist`,
+            role: 'user',
+          },
+        ]),
+        TE.map((response) => [response.text]),
+      );
+    }),
+  );
+};
+
+export const proceedWithTextSimple = async (
+  context: ConversationContext,
+  pushHistory: HistoryPusher,
+  typingHandler: TypingIndicator,
+  reply: UserReply,
+): Promise<string[]> => {
+  const result = await pipe(
+    proceedWithText(context, pushHistory, typingHandler, reply),
+    TE.fold(
+      (error) => {
+        console.error('Error in proceedWithText:', error);
+        return () => Promise.resolve(['Sorry, something went wrong. Please try again later.']);
+      },
+      (messages) => () => Promise.resolve(messages),
+    ),
+  )();
+
+  return result;
 };
