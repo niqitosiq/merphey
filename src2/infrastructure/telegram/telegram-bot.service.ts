@@ -70,8 +70,25 @@ export class TelegramBotService {
         await this.sessionRepository.update(session);
       };
       const reply = (message: string) => ctx.reply(message);
+      const updateIsThinking = async (isThinking: boolean) => {
+        session.isThinking = isThinking;
 
-      const messages = await proceedWithTextSimple(session, pushHistory, typingHandler, reply);
+        if (!isThinking) {
+          setTimeout(async () => {
+            session.isThinking = false;
+            await this.sessionRepository.update(session);
+          }, 1000 * 60);
+        }
+        await this.sessionRepository.update(session);
+      };
+
+      const messages = await proceedWithTextSimple(
+        session,
+        pushHistory,
+        typingHandler,
+        reply,
+        updateIsThinking,
+      );
 
       session.history.push(
         ...messages.map(

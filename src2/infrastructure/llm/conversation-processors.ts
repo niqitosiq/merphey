@@ -24,16 +24,19 @@ class OpenAIProvider {
   }
 
   async generateResponse(messages: ChatCompletionMessageParam[], options: AIOptions) {
-    console.log('Generating response with model', messages);
+    // console.log('Generating response with model', messages);
     const result = await this.client.chat.completions.create({
       model: this.model,
       messages,
       temperature: options.temperature,
       max_tokens: options.max_tokens,
       response_format: options.response_format ? { type: options.response_format.type } : undefined,
+      provider: {
+        data_collection: 'deny',
+      },
     });
 
-    console.log('Generated response', result.choices);
+    // console.log('Generated response', result.choices);
 
     return {
       content: result.choices[0]?.message?.content || '',
@@ -77,7 +80,7 @@ const createOpenAIProvider = (model?: string): O.Option<OpenAIProvider> =>
   pipe(
     O.some(new OpenAIProvider(model)),
     O.map((provider) => {
-      console.log('Created OpenAI provider with model:', model);
+      // console.log('Created OpenAI provider with model:', model);
       return provider;
     }),
   );
@@ -86,7 +89,7 @@ const createGeminiProvider = (model?: string): O.Option<GeminiProvider> =>
   pipe(
     O.some(new GeminiProvider(model)),
     O.map((provider) => {
-      console.log('Created Gemini provider with model:', model);
+      // console.log('Created Gemini provider with model:', model);
       return provider;
     }),
   );

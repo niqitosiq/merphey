@@ -1,6 +1,6 @@
 export interface HistoryMessage {
   text: string;
-  from?: string;
+  from?: 'user' | 'communicator' | 'psychologist';
   role?: string;
 }
 

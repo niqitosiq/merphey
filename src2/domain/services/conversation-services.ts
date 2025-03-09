@@ -58,14 +58,17 @@ export const detectAction = (
   messages: HistoryMessage[],
 ): TE.TaskEither<Error, SwitcherResponse> => {
   const fallbackResponse: SwitcherResponse = {
-    action: 'ASK_PSYCHO',
+    action: 'ASK_PSYCHO_IMMEDIATLY',
     reason: 'Failed to determine next action',
   };
 
   return pipe(
     generateLlmResponse<SwitcherResponse>(
       getLowTierClient(),
-      [{ role: 'system', content: SWITCHER_PROMPT }, ...mapMessagesToLlmFormat(messages)],
+      [
+        { role: 'system', content: SWITCHER_PROMPT },
+        ...mapMessagesToLlmFormat(messages.slice(-20)),
+      ],
       {
         temperature: 0.5,
         max_tokens: 500,
