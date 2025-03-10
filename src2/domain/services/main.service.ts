@@ -184,8 +184,10 @@ export const proceedWithText = (props: ProceedWithTextParams): TE.TaskEither<Err
         prompt,
       }),
     ),
-    TE.chain(({ shouldProceedWithCommunicate }) =>
-      detectAction(context.history, shouldProceedWithCommunicate),
+    TE.chain(({ shouldProceedWithCommunicate, prompt }) =>
+      shouldProceedWithCommunicate
+        ? detectAction(context.history, shouldProceedWithCommunicate)
+        : TE.right({ prompt, action: 'COMMUNICATE' }),
     ),
     TE.chain(({ prompt }) => {
       // Otherwise, continue with normal flow
