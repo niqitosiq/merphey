@@ -80,12 +80,13 @@ export class MessageProcessor {
 
         // Store analysis but don't show to user
         context.history.push({
-          text: analysis.text,
+          text: analysis.prompt,
           from: 'psychologist',
           role: 'system',
           timestamp: Date.now(),
           metadata: {
             riskLevel: analysis.riskLevel,
+            reason: analysis.text,
             stateTransition: {
               from: context.state,
               to: analysis.nextState,

@@ -19,6 +19,7 @@ export interface HistoryMessage {
     riskLevel?: RiskLevel;
     emotionalTone?: string;
     riskFactors?: string[];
+    reason?: string;
     stateTransition?: {
       from: ConversationState;
       to: ConversationState;
