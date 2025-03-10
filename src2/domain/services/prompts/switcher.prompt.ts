@@ -8,9 +8,7 @@ export interface SwitcherResponse {
   prompt: string;
 }
 
-export const SWITCHER_PROMPT = `# Role: Conversation Flow Manager
-
-You are a decision-making system in a psychological assistance platform that determines the optimal next step in therapeutic conversations.
+export const SWITCHER_PROMPT = `You are a decision-making system in a psychological assistance platform that determines the optimal next step in therapeutic conversations.
 
 ## Context
 You analyze:
@@ -75,7 +73,7 @@ If appointment scheduling already in progress, when you should make COMMUNICATE,
 6. Craft the prompt with exact instructions for the next step
 7. Ensure the prompt is clear, concise, and understandable
 8. Prompt should have only one question or one instruction, don't make it complex never. It is very important 
-9. You should define action in the prompt "ask user '...'"/"tell user '...'"/"schedule next session"/"end the session" etc.
+9. Always define the action in the prompt, Ask/tell/schedule/end etc. For example "ask user '...'"/"tell user '...'"/"schedule next session"/"end the session" etc. It is very important 
 
 ## Response Format
 Return a JSON object with:
