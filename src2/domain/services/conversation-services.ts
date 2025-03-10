@@ -37,7 +37,7 @@ export const askPsychologist = (
 ): TE.TaskEither<Error, PsychologistResponse> => {
   const fallbackResponse: PsychologistResponse = {
     text: 'Analysis could not be completed.',
-    guidance: 'Please ask the user to provide more information about their situation.',
+    prompt: 'Please ask the user to provide more information about their situation.',
     action: 'COMMUNICATE',
   };
 
@@ -55,11 +55,14 @@ export const askPsychologist = (
 
 export const detectAction = (
   messages: HistoryMessage[],
+  shouldProceedWithCommunicate: boolean,
 ): TE.TaskEither<Error, SwitcherResponse> => {
   const fallbackResponse: SwitcherResponse = {
     action: 'ASK_PSYCHO_IMMEDIATLY',
     prompt: 'Failed to determine next action',
   };
+
+  console.log('detecting');
 
   return pipe(
     generateLlmResponse<SwitcherResponse>(
@@ -67,6 +70,16 @@ export const detectAction = (
       [
         { role: 'system', content: SWITCHER_PROMPT },
         ...mapMessagesToLlmFormat(messages.slice(-20)),
+        {
+          role: 'system',
+          content: `latest message from psychologist: ${messages.filter((m) => m.from === 'psychologist').pop()?.text || 'No messages yet'}`,
+        },
+        {
+          role: 'user',
+          content: shouldProceedWithCommunicate
+            ? 'Analyzing in progress, please proceed only with communicate'
+            : 'Proceed with user',
+        },
       ],
       {
         temperature: 0.5,

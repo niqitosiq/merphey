@@ -33,7 +33,7 @@ export class UserSessionRepositoryImpl implements UserSessionRepository {
 
     // Try to load existing sessions
     this.loadSessionsFromCsv().catch((err) => {
-      console.warn('Could not load existing sessions:', err.message);
+      // console.warn('Could not load existing sessions:', err.message);
     });
   }
 
@@ -44,7 +44,7 @@ export class UserSessionRepositoryImpl implements UserSessionRepository {
 
     // Backup sessions after creating a new one
     await this.saveSessionsToCsv().catch((err) => {
-      console.error('Failed to save sessions to CSV:', err);
+      // console.error('Failed to save sessions to CSV:', err);
     });
 
     return session;
@@ -56,7 +56,7 @@ export class UserSessionRepositoryImpl implements UserSessionRepository {
 
     // Backup sessions after update
     await this.saveSessionsToCsv().catch((err) => {
-      console.error('Failed to save sessions to CSV:', err);
+      // console.error('Failed to save sessions to CSV:', err);
     });
 
     return session;
@@ -109,9 +109,9 @@ export class UserSessionRepositoryImpl implements UserSessionRepository {
 
       // Write to file
       fs.writeFileSync(savePath, csvContent, 'utf8');
-      console.log(`Sessions backed up to ${savePath}`);
+      // console.log(`Sessions backed up to ${savePath}`);
     } catch (error) {
-      console.error('Error saving sessions to CSV:', error);
+      // console.error('Error saving sessions to CSV:', error);
       throw error;
     }
   }
@@ -122,13 +122,13 @@ export class UserSessionRepositoryImpl implements UserSessionRepository {
 
     try {
       if (!fs.existsSync(loadPath)) {
-        console.log(`No session backup found at ${loadPath}`);
+        // console.log(`No session backup found at ${loadPath}`);
         return;
       }
 
       const fileContent = fs.readFileSync(loadPath, 'utf8');
       if (!fileContent.trim()) {
-        console.log(`Empty session backup file at ${loadPath}`);
+        // console.log(`Empty session backup file at ${loadPath}`);
         return;
       }
 
@@ -154,13 +154,13 @@ export class UserSessionRepositoryImpl implements UserSessionRepository {
           // Add to cache
           this.cache.set(session.userId, session);
         } catch (parseError) {
-          console.warn('Error parsing session row:', parseError);
+          // console.warn('Error parsing session row:', parseError);
         }
       }
 
-      console.log(`Loaded ${rows.length} sessions from ${loadPath}`);
+      // console.log(`Loaded ${rows.length} sessions from ${loadPath}`);
     } catch (error) {
-      console.error('Error loading sessions from CSV:', error);
+      // console.error('Error loading sessions from CSV:', error);
       throw error;
     }
   }

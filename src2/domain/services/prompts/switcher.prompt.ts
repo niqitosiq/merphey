@@ -28,7 +28,7 @@ Trigger when:
 ⚠️ Communication impasse detected
 ⚠️ Signs of severe distress/crisis
 ⚠️ Requires expert analysis to proceed safely
-
+ 
 ### 2. ASK_PSYCHO_BACKGROUND [NON-URGENT]
 Trigger when:
 ◷ Accumulated 3-5 exchanges needing analysis
@@ -36,12 +36,18 @@ Trigger when:
 ◷ Topic shift requiring professional perspective
 ◷ Optimization opportunities for strategies
 
+Don't trigger when latest message from psychologist in the context is:
+- "I'm working on the analysis in the background. Proceed with existing guidance from the history."
+- "I'm still analyzing the previous context. Let's continue with our current discussion while I process that."
+Use COMMUNICATE instead. It is very important
+
 ### 3. COMMUNICATE [DEFAULT]
 Use when:
 ✓ Conversation maintains productive flow
 ✓ Gradual progress being made
 ✓ No urgent intervention needed
 ✓ Current strategies remain effective
+✓ Psychological analysis is in progress
 
 ### 4. APPOINT_NEXT_SESSION [CLOSURE]
 Initiate when:

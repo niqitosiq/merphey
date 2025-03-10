@@ -108,7 +108,7 @@ const handleFinishingSession = (
 
 const handleActionResponse = (
   props: ProceedWithTextParams & { action: string; prompt: string },
-): TE.TaskEither<Error, { prompt: string }> => {
+): TE.TaskEither<Error, { prompt: string; shouldProceedWithCommunicate: boolean }> => {
   const { action, prompt, context, reply, pushHistory, updateIsThinking } = props;
 
   // Check if we should ask the psychologist
@@ -131,6 +131,7 @@ const handleActionResponse = (
         }),
         TE.map((prompt) => ({
           prompt,
+          shouldProceedWithCommunicate: false,
         })),
       );
     } else {
@@ -146,6 +147,7 @@ const handleActionResponse = (
       })();
 
       return TE.right({
+        shouldProceedWithCommunicate: true,
         prompt: `I'm working on the analysis in the background. Proceed with existing guidance from the history.`,
       });
     }
@@ -154,11 +156,13 @@ const handleActionResponse = (
   // If we're already thinking, just continue
   if (context.isThinking) {
     return TE.right({
+      shouldProceedWithCommunicate: true,
       prompt: `I'm still analyzing the previous context. Let's continue with our current discussion while I process that.`,
     });
   }
 
   return TE.right({
+    shouldProceedWithCommunicate: false,
     prompt,
   });
 };
@@ -168,7 +172,7 @@ export const proceedWithText = (props: ProceedWithTextParams): TE.TaskEither<Err
   typingHandler();
 
   return pipe(
-    detectAction(context.history),
+    detectAction(context.history, props.context.isThinking || false),
     TE.chain(({ action, prompt }) =>
       handleActionResponse({
         context,
@@ -180,7 +184,9 @@ export const proceedWithText = (props: ProceedWithTextParams): TE.TaskEither<Err
         prompt,
       }),
     ),
-    // () => detectAction(context.history),
+    TE.chain(({ shouldProceedWithCommunicate }) =>
+      detectAction(context.history, shouldProceedWithCommunicate),
+    ),
     TE.chain(({ prompt }) => {
       // Otherwise, continue with normal flow
       typingHandler();

@@ -74,10 +74,13 @@ export class TelegramBotService {
         session.isThinking = isThinking;
 
         if (!isThinking) {
-          setTimeout(async () => {
-            session.isThinking = false;
-            await this.sessionRepository.update(session);
-          }, 1000 * 60);
+          setTimeout(
+            async () => {
+              session.isThinking = false;
+              await this.sessionRepository.update(session);
+            },
+            1000 * 60 * 2,
+          );
         }
         await this.sessionRepository.update(session);
       };
