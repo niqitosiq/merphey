@@ -82,13 +82,13 @@ export class TelegramBotService {
         await this.sessionRepository.update(session);
       };
 
-      const messages = await proceedWithTextSimple(
-        session,
+      const messages = await proceedWithTextSimple({
+        context: session,
         pushHistory,
         typingHandler,
         reply,
         updateIsThinking,
-      );
+      });
 
       session.history.push(
         ...messages.map(

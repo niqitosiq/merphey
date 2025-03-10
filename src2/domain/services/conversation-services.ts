@@ -17,7 +17,6 @@ export const communicateWithUser = (
 ): TE.TaskEither<Error, CommunicatorResponse> => {
   const fallbackResponse: CommunicatorResponse = {
     text: "I'm not sure how to respond to that.",
-    nextAction: 'ASK_PSYCHO',
     reason: 'Failed to generate proper response',
   };
 
@@ -39,7 +38,7 @@ export const askPsychologist = (
   const fallbackResponse: PsychologistResponse = {
     text: 'Analysis could not be completed.',
     guidance: 'Please ask the user to provide more information about their situation.',
-    action: 'DIG_DEEPER',
+    action: 'COMMUNICATE',
   };
 
   return generateLlmResponse<PsychologistResponse>(
@@ -59,7 +58,7 @@ export const detectAction = (
 ): TE.TaskEither<Error, SwitcherResponse> => {
   const fallbackResponse: SwitcherResponse = {
     action: 'ASK_PSYCHO_IMMEDIATLY',
-    reason: 'Failed to determine next action',
+    prompt: 'Failed to determine next action',
   };
 
   return pipe(

@@ -13,12 +13,13 @@ export const safeParseJson = <T>(content: string, fallback: T): E.Either<Error, 
   try {
     return E.right(JSON.parse(content) as T);
   } catch (error) {
-    console.error('Failed to parse JSON response:', error);
-
     // try to remove ```json from the beginning and end of the string
     const guidance = content.replace(/^```json\n/, '').replace(/\n```$/, '');
 
     try {
+      console.error('Failed to parse JSON response:', error);
+
+      console.log('Trying to parse guidance:', guidance);
       return E.right(JSON.parse(guidance) as T);
     } catch (error) {
       console.error('Failed to parse JSON response:', error);
