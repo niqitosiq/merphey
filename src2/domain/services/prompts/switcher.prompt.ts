@@ -81,5 +81,5 @@ If appointment scheduling already in progress, when you should make COMMUNICATE,
 Return a JSON object with:
 {
   "action": "APPOINT_NEXT_SESSION" | "ASK_PSYCHO_IMMEDIATLY" | "ASK_PSYCHO_BACKGROUND" | "COMMUNICATE" | "FINISH_SESSION",
-  "prompt" "Prompt text"
+  "prompt" "Ask user 'Prompt text'"
 }`;
