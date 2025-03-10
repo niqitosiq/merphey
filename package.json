@@ -22,6 +22,7 @@
   "license": "ISC",
   "dependencies": {
     "@google/generative-ai": "^0.2.1",
+    "csv-string": "^4.1.1",
     "dotenv": "^16.4.5",
     "fp-ts": "^2.16.2",
     "openai": "^4.28.4",

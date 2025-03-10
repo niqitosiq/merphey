@@ -5,7 +5,7 @@ import {
   MessageProcessorConfig,
 } from './domain/services/message-processor.service';
 import { LlmService, LlmConfig } from './domain/services/llm.service';
-import { InMemorySessionRepository } from './domain/repositories/session.repository';
+import { FileSessionRepository } from './domain/repositories/file-session.repository';
 import dotenv from 'dotenv';
 
 dotenv.config();
@@ -21,7 +21,7 @@ const llmConfig: LlmConfig = {
   lowTierModel: process.env.LOW_TIER_MODEL || 'gpt-3.5-turbo',
   highTierModel: process.env.HIGH_TIER_MODEL || 'gpt-4-turbo-preview',
   maxRetries: Number(process.env.LLM_MAX_RETRIES) || 3,
-  timeoutMs: Number(process.env.LLM_TIMEOUT_MS) || 30000,
+  timeoutMs: Number(process.env.LLM_TIMEOUT_MS) || 3000000,
 };
 
 const messageProcessorConfig: MessageProcessorConfig = {
@@ -58,7 +58,7 @@ async function bootstrap() {
     validateConfig();
 
     // Initialize services
-    const sessionRepository = new InMemorySessionRepository();
+    const sessionRepository = new FileSessionRepository();
     const stateManager = new StateManager();
     const llmService = new LlmService(llmConfig);
 

@@ -61,20 +61,91 @@ export class MessageProcessor {
     message: HistoryMessage,
   ): Promise<ProcessedResponse> {
     try {
-      // First get communicator's assessment with enhanced response
+      // First get communicator's assessment
       const communicatorResponse = await this.generateCommunicatorResponse(context);
 
-      // Check for completed background tasks and integrate their results
+      // Check for completed background tasks
       await this.integrateBackgroundTasks(context);
 
-      // Assess risk level with more context
+      // Assess risk level
       const assessedRisk = this.stateManager.assessRiskLevel(
         context.riskLevel || 'LOW',
         context.history,
         communicatorResponse.urgency,
       );
 
-      // Attempt state transition with enhanced context
+      // Handle high risk situations internally
+      if (assessedRisk === 'HIGH' || assessedRisk === 'CRITICAL') {
+        const analysis = await this.generatePsychologistResponse(context);
+
+        // Store analysis but don't show to user
+        context.history.push({
+          text: analysis.text,
+          from: 'psychologist',
+          role: 'system',
+          timestamp: Date.now(),
+          metadata: {
+            riskLevel: analysis.riskLevel,
+            stateTransition: {
+              from: context.state,
+              to: analysis.nextState,
+              reason: analysis.stateReason,
+            },
+          },
+        });
+
+        // Get new communicator response with analysis context
+        const updatedResponse = await this.generateCommunicatorResponse(context);
+
+        return {
+          messages: [updatedResponse.text],
+          riskLevel: analysis.riskLevel,
+          transition: {
+            state: analysis.nextState,
+            reason: analysis.stateReason,
+          },
+        };
+      }
+
+      // Handle session closing
+      if (context.state === ConversationState.SESSION_CLOSING) {
+        const finishingResponse = await this.generateFinishingResponse(context);
+
+        // Store analysis but don't show to user
+        context.history.push({
+          text: finishingResponse.text,
+          from: 'psychologist',
+          role: 'system',
+          timestamp: Date.now(),
+          metadata: {
+            riskLevel: context.riskLevel,
+          },
+        });
+
+        // Get final communicator response
+        const closingResponse = await this.generateCommunicatorResponse(context);
+
+        return {
+          messages: [closingResponse.text],
+          shouldEndSession: true,
+          riskLevel: context.riskLevel,
+          transition: {
+            state: ConversationState.SESSION_CLOSING,
+            reason: finishingResponse.reason,
+          },
+          metrics: finishingResponse.summaryMetrics
+            ? {
+                progressIndicators: {
+                  sessionProgress: finishingResponse.summaryMetrics.progressMade,
+                  therapeuticAlignment: finishingResponse.summaryMetrics.engagementQuality,
+                  riskTrend: finishingResponse.summaryMetrics.riskTrend,
+                },
+              }
+            : undefined,
+        };
+      }
+
+      // Regular response
       const stateTransition = this.stateManager.attemptStateTransition(
         context,
         communicatorResponse.suggestedNextState,
@@ -82,7 +153,6 @@ export class MessageProcessor {
         assessedRisk,
       );
 
-      // Update message metadata with enhanced information
       if (stateTransition) {
         message.metadata = {
           ...message.metadata,
@@ -96,22 +166,11 @@ export class MessageProcessor {
         };
       }
 
-      // Handle high risk situations with more context
-      if (assessedRisk === 'HIGH' || assessedRisk === 'CRITICAL') {
-        return this.handleHighRiskSituation(context, communicatorResponse);
-      }
-
       // Schedule background analysis if needed
       if (this.shouldTriggerBackgroundAnalysis(context, communicatorResponse)) {
         await this.scheduleBackgroundAnalysis(context);
       }
 
-      // Handle session completion with enhanced metrics
-      if (context.state === ConversationState.SESSION_CLOSING) {
-        return this.handleSessionClosing(context);
-      }
-
-      // Enhanced normal response
       return {
         messages: [communicatorResponse.text],
         riskLevel: assessedRisk,
@@ -129,39 +188,12 @@ export class MessageProcessor {
     } catch (error) {
       console.error('Error processing message:', error);
       context.state = ConversationState.ERROR_RECOVERY;
+      const errorResponse = await this.generateCommunicatorResponse(context);
       return {
-        messages: ['I encountered an issue. Let me take a moment to ensure everything is okay.'],
+        messages: [errorResponse.text],
         riskLevel: 'LOW',
       };
     }
-  }
-
-  private async handleHighRiskSituation(
-    context: ConversationContext,
-    communicatorResponse: CommunicatorResponse,
-  ): Promise<ProcessedResponse> {
-    context.isThinking = true;
-    const analysis = await this.generatePsychologistResponse(context);
-    context.isThinking = false;
-    context.lastAnalysisTimestamp = Date.now();
-
-    const messages = [analysis.text];
-    if (analysis.safetyRecommendations?.length) {
-      messages.push('Safety Recommendations:\n' + analysis.safetyRecommendations.join('\n'));
-    }
-
-    if (analysis.therapeuticPlan) {
-      messages.push('Suggested approach:\n' + analysis.therapeuticPlan);
-    }
-
-    return {
-      messages,
-      riskLevel: analysis.riskLevel,
-      transition: {
-        state: analysis.nextState,
-        reason: analysis.stateReason,
-      },
-    };
   }
 
   private async integrateBackgroundTasks(context: ConversationContext): Promise<void> {
@@ -171,18 +203,32 @@ export class MessageProcessor {
     for (const task of completedTasks) {
       if (task.type === 'analysis') {
         const analysis = task.result as PsychologistResponse;
+
+        // Store psychologist's analysis in history
         context.history.push({
           text: analysis.text,
           from: 'psychologist',
-          role: 'assistant',
+          role: 'system',
           timestamp: Date.now(),
           metadata: {
             riskLevel: analysis.riskLevel,
             stateTransition: {
-              from: context.state, // Include current state as 'from'
+              from: context.state,
               to: analysis.nextState,
               reason: analysis.stateReason,
             },
+          },
+        });
+
+        // Get communicator to rephrase if needed
+        const userResponse = await this.generateCommunicatorResponse(context);
+        context.history.push({
+          text: userResponse.text,
+          from: 'assistant',
+          role: 'assistant',
+          timestamp: Date.now(),
+          metadata: {
+            riskLevel: userResponse.urgency,
           },
         });
       }
@@ -217,35 +263,6 @@ export class MessageProcessor {
         response.engagementLevel === 'LOW' ||
         response.riskFactors.length > 0)
     );
-  }
-
-  private async handleSessionClosing(context: ConversationContext): Promise<ProcessedResponse> {
-    const finishingResponse = await this.generateFinishingResponse(context);
-
-    const messages = [
-      finishingResponse.text,
-      `Recommendations: ${finishingResponse.recommendations}`,
-      `Next steps: ${finishingResponse.nextSteps}`,
-    ];
-
-    return {
-      messages,
-      shouldEndSession: true,
-      riskLevel: context.riskLevel,
-      transition: {
-        state: ConversationState.SESSION_CLOSING,
-        reason: finishingResponse.reason,
-      },
-      metrics: finishingResponse.summaryMetrics
-        ? {
-            progressIndicators: {
-              sessionProgress: finishingResponse.summaryMetrics.progressMade,
-              therapeuticAlignment: finishingResponse.summaryMetrics.engagementQuality,
-              riskTrend: finishingResponse.summaryMetrics.riskTrend,
-            },
-          }
-        : undefined,
-    };
   }
 
   private async generateCommunicatorResponse(

@@ -1,3 +1,4 @@
+import { log } from 'console';
 import { ConversationContext, ConversationState, RiskLevel } from '../models/conversation';
 
 export interface SessionRepository {
@@ -45,6 +46,7 @@ export class InMemorySessionRepository implements SessionRepository {
     }
 
     context.lastUpdated = Date.now();
+    log(context);
     this.sessions.set(context.userId, context);
   }
 

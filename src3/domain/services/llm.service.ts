@@ -34,7 +34,7 @@ export class LlmService {
       baseURL: config.endpoint || 'https://openrouter.ai/api/v1',
     });
     this.maxRetries = config.maxRetries || 3;
-    this.timeoutMs = config.timeoutMs || 200000;
+    this.timeoutMs = config.timeoutMs || 300000;
   }
 
   async generateResponse<T extends BaseResponse>(
@@ -73,19 +73,19 @@ export class LlmService {
       }
 
       try {
+        // First try to parse as is
         const response = JSON.parse(content) as T;
         if (!this.validateResponse(response)) {
           throw new LlmError('Invalid response format', null, false);
         }
         return response;
       } catch (parseError) {
-        // Try to remove markdown formatting if present
+        // Try to clean up markdown formatting if present
         const cleanContent = content
           .replace(/```json\n?/, '')
           .replace(/```\n?/, '')
           .trim();
 
-        console.log(cleanContent);
         const response = JSON.parse(cleanContent) as T;
         if (!this.validateResponse(response)) {
           throw new LlmError('Invalid response format', null, false);
@@ -94,7 +94,6 @@ export class LlmService {
       }
     } catch (error) {
       if (this.isRetryableError(error) && retryCount < this.maxRetries) {
-        console.error(error);
         console.warn(`LLM request failed, retrying (${retryCount + 1}/${this.maxRetries})...`);
         await new Promise((resolve) => setTimeout(resolve, Math.pow(2, retryCount) * 1000));
         return this.generateResponse(messages, systemPrompt, useHighTier, retryCount + 1);
@@ -115,7 +114,7 @@ export class LlmService {
     const formattedMessages = messages.map((msg) => ({
       role: msg.role,
       content: msg.text,
-    }));
+    })) as ChatCompletionMessageParam[];
 
     return [{ role: 'system', content: systemPrompt }, ...formattedMessages];
   }
