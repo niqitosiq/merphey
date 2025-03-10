@@ -118,7 +118,7 @@ const createFallbackProvider = (model: string): Provider => new OpenAIProvider(m
 
 export const getLowTierClient = (): AIClient => ({
   provider: pipe(
-    getAIProvider('openai', 'google/gemini-2.0-flash-001'),
+    getAIProvider('openai', 'deepseek/deepseek-chat'),
     O.getOrElse(() => createFallbackProvider('google/gemini-2.0-flash-001')),
   ),
 });

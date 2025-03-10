@@ -10,7 +10,7 @@ import { PSYCHOLOGIST_ANALYSIS_PROMPT, PsychologistResponse } from './prompts/ps
 import { SWITCHER_PROMPT, SwitcherResponse } from './prompts/switcher.prompt';
 import { FINISHING_PROMPT, FinishingResponse } from './prompts/finishing.prompt';
 import { generateLlmResponse } from './llm-utils';
-import { mapMessagesToLlmFormat } from './types';
+import { formatConversationHistory, mapMessagesToLlmFormat } from './types';
 
 export const communicateWithUser = (
   messages: HistoryMessage[],
@@ -63,16 +63,38 @@ export const detectAction = (
   };
 
   console.log('detecting');
+  console.log('latest:', [
+    { role: 'system', content: SWITCHER_PROMPT },
+    {
+      role: 'system',
+      content: `latest guidance from psychologist: "${messages.filter((m) => m.from === 'psychologist' && m.text.includes('follow the guidance')).pop()?.text || 'No messages yet'}"`,
+    },
+    {
+      role: 'system',
+      content: `The history of the conversation:
+              ${formatConversationHistory(messages.filter((m) => m.from !== 'psychologist').slice(-30))}`,
+    },
+    {
+      role: 'user',
+      content: shouldProceedWithCommunicate
+        ? 'Analyzing in progress, please proceed only with communicate'
+        : 'Proceed with user',
+    },
+  ]);
 
   return pipe(
     generateLlmResponse<SwitcherResponse>(
       getLowTierClient(),
       [
         { role: 'system', content: SWITCHER_PROMPT },
-        ...mapMessagesToLlmFormat(messages.slice(-20)),
         {
           role: 'system',
-          content: `latest message from psychologist: ${messages.filter((m) => m.from === 'psychologist').pop()?.text || 'No messages yet'}`,
+          content: `The history of the conversation:
+                ${formatConversationHistory(messages.filter((m) => m.from !== 'psychologist').slice(-30))}`,
+        },
+        {
+          role: 'system',
+          content: `latest guidance from psychologist: "${messages.filter((m) => m.from === 'psychologist' && m.text.includes('follow the guidance')).pop()?.text || 'No messages yet'}"`,
         },
         {
           role: 'user',
