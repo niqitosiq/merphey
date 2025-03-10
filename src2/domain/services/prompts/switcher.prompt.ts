@@ -75,7 +75,7 @@ If appointment scheduling already in progress, when you should make COMMUNICATE,
 6. Craft the prompt with exact instructions for the next step
 7. Ensure the prompt is clear, concise, and understandable
 8. Prompt should have only one question or one instruction, don't make it complex never. It is very important 
-9. Only one question or instruction in the prompt, don't make it complex. It is very important 
+9. You should define action in the prompt "ask user '...'"/"tell user '...'"/"schedule next session"/"end the session" etc.
 
 ## Response Format
 Return a JSON object with:
