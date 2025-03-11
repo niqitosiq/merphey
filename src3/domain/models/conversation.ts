@@ -2,6 +2,7 @@ export enum ConversationState {
   INITIAL = 'INITIAL',
   GATHERING_INFO = 'GATHERING_INFO',
   ANALYSIS_NEEDED = 'ANALYSIS_NEEDED',
+  PENDING_ANALYSIS = 'PENDING_ANALYSIS', // Added new blocking state
   DEEP_ANALYSIS = 'DEEP_ANALYSIS',
   GUIDANCE_DELIVERY = 'GUIDANCE_DELIVERY',
   SESSION_CLOSING = 'SESSION_CLOSING',
@@ -25,6 +26,13 @@ export interface HistoryMessage {
       to: ConversationState;
       reason: string;
     };
+    guidance?: {
+      prompt?: string;
+      therapeuticPlan?: string;
+      safetyRecommendations?: string[];
+      currentStep?: number;
+      stepProgress?: string;
+    };
   };
 }
 
@@ -38,6 +46,14 @@ export interface ConversationContext {
   lastUpdated: number;
   riskLevel: RiskLevel;
   activeBackgroundTasks?: string[];
+  therapeuticPlan?: string; // Added therapeutic plan tracking
+  activeGuidance?: {
+    prompt: string;
+    currentStep: number;
+    stepProgress: string;
+    therapeuticPlan: string;
+    safetyRecommendations: string[];
+  };
 }
 
 export interface StateTransition {

@@ -28,6 +28,8 @@ export interface CommunicatorResponse extends BaseResponse {
   emotionalTone: string;
   riskFactors: string[];
   engagementLevel?: 'LOW' | 'MEDIUM' | 'HIGH';
+  currentActionStep?: number;
+  stepProgress?: string;
 }
 
 export interface FinishingResponse extends BaseResponse {

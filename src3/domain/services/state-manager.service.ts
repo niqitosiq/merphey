@@ -5,16 +5,22 @@ import {
   StateTransition,
   HistoryMessage,
 } from '../models/conversation';
+import { Logger } from '../../utils/logger';
 
 export class StateManager {
   private static readonly STATE_TRANSITION_RULES: Record<ConversationState, ConversationState[]> = {
     [ConversationState.INITIAL]: [ConversationState.GATHERING_INFO],
     [ConversationState.GATHERING_INFO]: [
       ConversationState.ANALYSIS_NEEDED,
+      ConversationState.PENDING_ANALYSIS,
       ConversationState.DEEP_ANALYSIS,
       ConversationState.SESSION_CLOSING,
     ],
     [ConversationState.ANALYSIS_NEEDED]: [
+      ConversationState.PENDING_ANALYSIS,
+      ConversationState.DEEP_ANALYSIS,
+    ],
+    [ConversationState.PENDING_ANALYSIS]: [
       ConversationState.GUIDANCE_DELIVERY,
       ConversationState.DEEP_ANALYSIS,
     ],
@@ -32,10 +38,12 @@ export class StateManager {
 
   private static readonly RISK_STATE_MAPPING: Record<RiskLevel, ConversationState | null> = {
     CRITICAL: ConversationState.DEEP_ANALYSIS,
-    HIGH: ConversationState.ANALYSIS_NEEDED,
+    HIGH: ConversationState.PENDING_ANALYSIS,
     MEDIUM: null,
     LOW: null,
   };
+
+  private readonly logger = Logger.getInstance();
 
   attemptStateTransition(
     context: ConversationContext,
@@ -43,6 +51,14 @@ export class StateManager {
     reason: string,
     riskLevel: RiskLevel,
   ): StateTransition | null {
+    this.logger.debug('Attempting state transition', {
+      userId: context.userId,
+      currentState: context.state,
+      suggestedState,
+      reason,
+      riskLevel,
+    });
+
     // Check if transition is forced by risk level
     const riskForcedState = StateManager.RISK_STATE_MAPPING[riskLevel];
     const targetState = riskForcedState || suggestedState;
@@ -54,6 +70,11 @@ export class StateManager {
       this.isTransitionAllowed(context.state, targetState);
 
     if (!isAllowed) {
+      this.logger.debug('Invalid state transition rejected', {
+        userId: context.userId,
+        currentState: context.state,
+        suggestedState,
+      });
       return null;
     }
 
@@ -64,6 +85,11 @@ export class StateManager {
       riskLevel,
       forcedByRisk: !!riskForcedState,
     };
+
+    this.logger.info('State transition approved', {
+      userId: context.userId,
+      ...transition,
+    });
 
     // Update context state
     context.state = targetState;
@@ -76,11 +102,23 @@ export class StateManager {
     return StateManager.STATE_TRANSITION_RULES[fromState].includes(toState);
   }
 
+  private isUserActionAllowed(state: ConversationState): boolean {
+    return (
+      state !== ConversationState.PENDING_ANALYSIS && state !== ConversationState.DEEP_ANALYSIS
+    );
+  }
+
   assessRiskLevel(
     currentRisk: RiskLevel,
     messages: HistoryMessage[],
     suggestedRisk?: RiskLevel,
   ): RiskLevel {
+    this.logger.debug('Assessing risk level', {
+      currentRisk,
+      suggestedRisk,
+      historyLength: messages.length,
+    });
+
     // Get recent messages for analysis
     const recentMessages = messages.slice(-5);
 

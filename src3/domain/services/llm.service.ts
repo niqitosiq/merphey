@@ -2,6 +2,7 @@ import { HistoryMessage } from '../models/conversation';
 import { BaseResponse } from '../prompts';
 import OpenAI from 'openai';
 import { ChatCompletion, ChatCompletionMessageParam } from 'openai/resources';
+import { Logger } from '../../utils/logger';
 
 export interface LlmConfig {
   apiKey: string;
@@ -27,6 +28,7 @@ export class LlmService {
   private readonly openai: OpenAI;
   private readonly maxRetries: number;
   private readonly timeoutMs: number;
+  private readonly logger = Logger.getInstance();
 
   constructor(private readonly config: LlmConfig) {
     this.openai = new OpenAI({
@@ -35,6 +37,13 @@ export class LlmService {
     });
     this.maxRetries = config.maxRetries || 3;
     this.timeoutMs = config.timeoutMs || 300000;
+
+    this.logger.info('LLM service initialized', {
+      lowTierModel: config.lowTierModel,
+      highTierModel: config.highTierModel,
+      maxRetries: this.maxRetries,
+      timeoutMs: this.timeoutMs,
+    });
   }
 
   async generateResponse<T extends BaseResponse>(
@@ -43,13 +52,25 @@ export class LlmService {
     useHighTier: boolean = false,
     retryCount: number = 0,
   ): Promise<T> {
+    const startTime = Date.now();
+    const model = useHighTier ? this.config.highTierModel : this.config.lowTierModel;
+    const requestId = `${Date.now()}-${Math.random().toString(36).substring(7)}`;
+
+    this.logger.debug('Generating LLM response', {
+      requestId,
+      model,
+      useHighTier,
+      retryCount,
+      messageCount: messages.length,
+    });
+
     const formattedMessages = this.formatMessages(messages, systemPrompt);
 
     try {
       const completion = (await Promise.race([
         this.openai.chat.completions.create(
           {
-            model: useHighTier ? this.config.highTierModel : this.config.lowTierModel,
+            model,
             messages: formattedMessages,
             temperature: useHighTier ? 0.7 : 0.9,
             max_tokens: useHighTier ? 2000 : 1000,
@@ -72,30 +93,63 @@ export class LlmService {
         throw new LlmError('Empty response from LLM');
       }
 
+      let response: T;
       try {
         // First try to parse as is
-        const response = JSON.parse(content) as T;
-        if (!this.validateResponse(response)) {
-          throw new LlmError('Invalid response format', null, false);
-        }
-        return response;
+        response = JSON.parse(content) as T;
       } catch (parseError) {
         // Try to clean up markdown formatting if present
-        const cleanContent = content
-          .replace(/```json\n?/, '')
-          .replace(/```\n?/, '')
-          .trim();
-
-        const response = JSON.parse(cleanContent) as T;
-        if (!this.validateResponse(response)) {
-          throw new LlmError('Invalid response format', null, false);
-        }
-        return response;
+        const cleanContent =
+          '{' +
+          content
+            .replace(/```json\n?/, '')
+            .replace(/```\n?/, '')
+            .split('{')
+            .slice(1)[0]
+            .trim();
+        this.logger.info('LLM response contains markdown formatting, cleaning up', {
+          requestId,
+          model,
+          cleanContent,
+        });
+        response = JSON.parse(cleanContent) as T;
       }
+
+      if (!this.validateResponse(response)) {
+        throw new LlmError('Invalid response format', null, false);
+      }
+
+      const processingTime = Date.now() - startTime;
+      this.logger.info('LLM response generated successfully', {
+        requestId,
+        model,
+        processingTimeMs: processingTime,
+        promptTokens: completion.usage?.prompt_tokens,
+        completionTokens: completion.usage?.completion_tokens,
+        totalTokens: completion.usage?.total_tokens,
+      });
+
+      return response;
     } catch (error) {
-      if (this.isRetryableError(error) && retryCount < this.maxRetries) {
-        console.warn(`LLM request failed, retrying (${retryCount + 1}/${this.maxRetries})...`);
-        await new Promise((resolve) => setTimeout(resolve, Math.pow(2, retryCount) * 1000));
+      const isRetryable = this.isRetryableError(error);
+      this.logger.error('LLM request failed', {
+        requestId,
+        model,
+        error: error instanceof Error ? error.message : 'Unknown error',
+        isRetryable,
+        retryCount,
+        stack: error instanceof Error ? error.stack : undefined,
+      });
+
+      if (isRetryable && retryCount < this.maxRetries) {
+        const delayMs = Math.pow(2, retryCount) * 1000;
+        this.logger.debug('Retrying LLM request', {
+          requestId,
+          retryCount: retryCount + 1,
+          delayMs,
+        });
+
+        await new Promise((resolve) => setTimeout(resolve, delayMs));
         return this.generateResponse(messages, systemPrompt, useHighTier, retryCount + 1);
       }
 
@@ -103,7 +157,7 @@ export class LlmService {
         throw error;
       }
 
-      throw new LlmError('Failed to generate LLM response', error, this.isRetryableError(error));
+      throw new LlmError('Failed to generate LLM response', error, isRetryable);
     }
   }
 
