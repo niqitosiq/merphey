@@ -30,6 +30,7 @@ export class StateManager {
     ],
     [ConversationState.GUIDANCE_DELIVERY]: [
       ConversationState.GATHERING_INFO,
+      ConversationState.PENDING_ANALYSIS, // Added PENDING_ANALYSIS as valid transition
       ConversationState.SESSION_CLOSING,
     ],
     [ConversationState.SESSION_CLOSING]: [],

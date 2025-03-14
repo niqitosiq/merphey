@@ -88,7 +88,7 @@ export class LlmService {
         ),
       ])) as ChatCompletion;
 
-      const content = completion?.choices[0]?.message?.content;
+      const content = completion?.choices?.[0]?.message?.content;
       if (!content) {
         throw new LlmError('Empty response from LLM');
       }
@@ -131,7 +131,7 @@ export class LlmService {
 
       return response;
     } catch (error) {
-      const isRetryable = this.isRetryableError(error);
+      const isRetryable = true; //this.isRetryableError(error);
       this.logger.error('LLM request failed', {
         requestId,
         model,
