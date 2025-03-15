@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   bot:
     build:
@@ -16,7 +14,27 @@ services:
       - TZ=UTC
     networks:
       - bot-network
+  postgres:
+    image: postgres:latest
+    container_name: therapy_db
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: secret
+      POSTGRES_DB: mentalhealth
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d mentalhealth"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
 networks:
   bot-network:
     driver: bridge
+
+
+volumes:
+  postgres_data:
