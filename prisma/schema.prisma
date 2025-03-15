@@ -1,0 +1,105 @@
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum ConversationState {
+  INFO_GATHERING
+  ACTIVE_GUIDANCE
+  PLAN_VALIDATION
+  PLAN_REVISION
+  EMERGENCY_INTERVENTION
+  SESSION_CLOSING
+}
+
+enum RiskLevel {
+  BASELINE
+  ELEVATED
+  TARGETED
+  ACUTE
+}
+
+enum CommunicationStyle {
+  ANALYTICAL
+  EMOTIONAL
+  VISUAL
+  DETAIL_ORIENTED
+}
+
+model User {
+  id                 String              @id @default(uuid())
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  conversations      Conversation[]
+  riskAssessments    RiskAssessment[]
+  communicationStyle CommunicationStyle?
+}
+
+model Conversation {
+  id              String            @id @default(uuid())
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  state           ConversationState @default(INFO_GATHERING)
+  riskLevel       RiskLevel         @default(BASELINE)
+  contextVector   String? // JSON array of embeddings
+  messageHistory  Json // Array of Message objects
+  contextHistory  Json // Array of context snapshots
+  currentPlanId   String?
+  currentPlan     TherapeuticPlan?  @relation(fields: [currentPlanId], references: [id])
+  userId          String
+  user            User              @relation(fields: [userId], references: [id])
+  riskAssessments RiskAssessment[]
+  Message         Message[]
+
+  @@index([userId])
+  @@index([state])
+}
+
+model TherapeuticPlan {
+  id                String            @id @default(uuid())
+  version           Int               @default(1)
+  previousVersionId String? // For version history
+  previousVersion   TherapeuticPlan?  @relation("PlanVersions", fields: [previousVersionId], references: [id])
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  steps             Json // Array of PlanStep objects
+  checkpoints       Json // Array of Checkpoint objects
+  conversationId    String?
+  conversation      Conversation?     @relation(fields: [conversationId], references: [id])
+  validationScore   Float?
+  TherapeuticPlan   TherapeuticPlan[]
+
+  @@unique([id, version])
+  @@index([conversationId])
+}
+
+model RiskAssessment {
+  id             String       @id @default(uuid())
+  createdAt      DateTime     @default(now())
+  riskLevel      RiskLevel
+  triggers       Json // Array of detected risk triggers
+  actionTaken    Json // JSON object of mitigation actions
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id])
+  userId         String
+  user           User         @relation(fields: [userId], references: [id])
+
+  @@index([conversationId])
+  @@index([userId])
+}
+
+model Message {
+  id             String       @id @default(uuid())
+  content        String
+  isFromUser     Boolean
+  metadata       Json // { riskFactors: [], emotionalTone: "", embeddings: [] }
+  timestamp      DateTime     @default(now())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id])
+
+  @@index([conversationId])
+}

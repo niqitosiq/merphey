@@ -74,7 +74,7 @@ export class MessageProcessor {
     if (contextDelta.requiresPlanRevision) {
       const newPlan = await this.revisePlanWithLLM(userAggregate, currentPlan, contextDelta);
 
-      userAggregate.updatePlanVersion(newPlan.getPlan().version);
+      userAggregate.updatePlanId(newPlan.getPlan().id);
       planChanged = true;
     }
 

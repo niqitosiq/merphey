@@ -5,10 +5,7 @@
 import { User } from '../entities/user.entity';
 import { ConversationState } from '../value-objects/conversation-state.value-object';
 import { MessageHistory } from '../value-objects/message-history.value-object';
-import {
-  RiskLevel,
-  RiskSpectrum,
-} from '../../risk-management/value-objects/risk-level.value-object';
+import { RiskSpectrum } from '../../risk-management/value-objects/risk-level.value-object';
 
 export class UserAggregate {
   private user: User;
@@ -55,6 +52,7 @@ export class UserAggregate {
       timestamp: new Date(),
       sender,
       metadata,
+      historyId: this.messageHistory.id,
     };
 
     this.messageHistory = {
@@ -64,10 +62,14 @@ export class UserAggregate {
   }
 
   // Update plan version
-  updatePlanVersion(version: number): void {
+  updatePlanId(planId: string): void {
+    if (!this.user.plans) {
+      this.user.plans = [];
+    }
+
     this.user = {
       ...this.user,
-      planVersion: version,
+      plans: [...this.user.plans, { id: planId }],
       updatedAt: new Date(),
     };
   }

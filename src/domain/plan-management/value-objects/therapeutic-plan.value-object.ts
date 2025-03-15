@@ -2,6 +2,8 @@
  * TherapeuticPlan Value Objects - Core structures for therapeutic intervention plans
  */
 
+import { UUID } from 'crypto';
+
 export enum PlanStepType {
   ASSESSMENT = 'ASSESSMENT',
   EDUCATION = 'EDUCATION',
@@ -32,7 +34,7 @@ export interface Checkpoint {
 }
 
 export interface TherapeuticPlanData {
-  id: string;
+  id: UUID;
   version: number;
   createdAt: Date;
   updatedAt: Date;

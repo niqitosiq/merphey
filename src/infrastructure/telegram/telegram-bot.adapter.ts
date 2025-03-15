@@ -10,8 +10,7 @@ import { WebhookValidator } from './utilities/webhook-validator';
 import { Formatter } from './utilities/formatter';
 import { MessageProcessor } from '../../application/services/message-processing.service';
 import { TelegramConfig } from './telegram-types';
-import { UserAggregate } from '../../domain/user-interaction/aggregates/user.aggregate';
-import { TherapeuticPlanAggregate } from '../../domain/plan-management/aggregates/therapeutic-plan.aggregate';
+import { UserRepository } from '@domain/user-interaction/repositories/user.repository';
 
 export class TelegramBotAdapter {
   private bot!: TelegramBot;
@@ -24,12 +23,12 @@ export class TelegramBotAdapter {
   private authMiddleware!: AuthMiddleware;
   private errorHandler!: ErrorHandler;
   private webhookValidator!: WebhookValidator;
+  private userRepository!: UserRepository;
 
   constructor(
     private config: TelegramConfig,
     private messageProcessor: MessageProcessor,
-    private userAggregate: UserAggregate,
-    private planAggregate: TherapeuticPlanAggregate,
+    private userRepository: UserRepository,
   ) {
     this.initializeComponents();
     this.setupBot();
@@ -75,6 +74,12 @@ export class TelegramBotAdapter {
 
         await this.rateLimiter.handle(msg);
         await this.authMiddleware.handle(msg);
+
+        if (!msg.from) {
+          throw new Error('Message must have a sender');
+        }
+
+        const user = this.userRepository.findById(String(msg.from.id));
 
         const domainMessage = this.messageAdapter.toDomain(msg);
         const processedResponse = await this.messageProcessor.processMessage(

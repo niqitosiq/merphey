@@ -21,9 +21,11 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
+    "@prisma/client": "^6.5.0",
     "dotenv": "^16.3.1",
     "node-telegram-bot-api": "^0.61.0",
     "openai": "^4.6.0",
+    "prisma": "^6.5.0",
     "uuid": "^9.0.0"
   },
   "devDependencies": {
