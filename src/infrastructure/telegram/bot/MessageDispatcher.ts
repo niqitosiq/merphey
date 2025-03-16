@@ -1,6 +1,6 @@
 import { TextMessageHandler } from '../handlers/TextMessageHandler';
 import { CommandHandler } from '../handlers/CommandHandler';
-import { MentalHealthApplication } from '../../../MentalHealthApplication';
+import { MentalHealthApplication } from '../../../application/MentalHealthApplication';
 import TelegramBot from 'node-telegram-bot-api';
 import { RiskLevel } from '../../../domain/shared/enums';
 

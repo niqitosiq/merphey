@@ -1,6 +1,6 @@
 import { Message as PrismaMessage } from '@prisma/client';
 
-import { Metadata, SessionProgress } from './types';
+import { Metadata } from './types';
 
 export class Message implements Omit<PrismaMessage, 'metadata'> {
   constructor(

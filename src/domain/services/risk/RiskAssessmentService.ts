@@ -72,7 +72,9 @@ export class RiskAssessor {
       "reason": "..."
     }`;
 
-    const response = await this.llmService.generateCompletion(prompt);
+    const response = await this.llmService.generateCompletion(prompt, {
+      model: 'amazon/nova-micro-v1',
+    });
     const analysis = JSON.parse(response);
 
     return {

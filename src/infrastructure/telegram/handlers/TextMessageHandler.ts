@@ -1,4 +1,4 @@
-import { MentalHealthApplication } from '../../../MentalHealthApplication';
+import { MentalHealthApplication } from '../../../application/MentalHealthApplication';
 import { SessionResponse } from '../../../domain/aggregates/conversation/entities/types';
 
 /**
@@ -16,6 +16,7 @@ export class TextMessageHandler {
    * Handles a text message from a user
    * @param userId - The Telegram user ID
    * @param messageText - The message content
+   * @param userLanguage - The language of the user
    * @returns Promise<string> - Response message to send to the user
    */
   async handleMessage(userId: string, messageText: string): Promise<string> {
@@ -26,7 +27,7 @@ export class TextMessageHandler {
       // Sanitize user input - remove potentially harmful content
       const sanitizedMessage = this.sanitizeInput(messageText);
 
-      // Process the message through the main application
+      // Process the message through the main application with language info
       const response: SessionResponse = await this.application.handleMessage(
         userId,
         sanitizedMessage,
@@ -73,28 +74,13 @@ export class TextMessageHandler {
     // Basic formatting - in a real app, this would be more sophisticated
     let formattedResponse = response.message;
 
-    // Add progress information if available
-    // if (response.progress && response.progress.insights && response.progress.insights.length > 0) {
-    //   formattedResponse += '\n\n_Progress insights:_\n';
-    //   response.progress.insights.forEach((insight) => {
-    //     formattedResponse += `- ${insight}\n`;
-    //   });
-    // }
-
-    // // Add resources if available
-    // if (response.resources && response.resources.length > 0) {
-    //   formattedResponse += '\n\n_Helpful resources:_\n';
-    //   response.resources.forEach((resource) => {
-    //     formattedResponse += `- [${resource.name}](${resource.url})\n`;
-    //   });
-    // }
-
     return formattedResponse;
   }
 
   /**
    * Generates an appropriate error message based on the error type
    * @param error - The caught error
+   * @param language - The language of the user
    * @returns string - User-friendly error message
    */
   private generateErrorMessage(error: any): string {
@@ -113,6 +99,62 @@ export class TextMessageHandler {
 
     // Default error message
     return 'Something went wrong while processing your message. Please try again later.';
+  }
+
+  /**
+   * Retrieves localized validation error message
+   * @param language - The language of the user
+   * @returns string - Localized validation error message
+   */
+  private getLocalizedValidationError(language: string): string {
+    const errorMessages: Record<string, string> = {
+      es: 'No pude entender tu mensaje. ¿Podrías expresarlo de otra manera?',
+      fr: "Je n'ai pas pu comprendre votre message. Pourriez-vous le formuler différemment ?",
+      // Add more languages as needed
+    };
+    return errorMessages[language] || errorMessages['en'];
+  }
+
+  /**
+   * Retrieves localized rate limit error message
+   * @param language - The language of the user
+   * @returns string - Localized rate limit error message
+   */
+  private getLocalizedRateLimitError(language: string): string {
+    const errorMessages: Record<string, string> = {
+      es: 'Estás enviando mensajes demasiado rápido. Por favor, espera un momento antes de intentar nuevamente.',
+      fr: 'Vous envoyez des messages trop rapidement. Veuillez attendre un moment avant de réessayer.',
+      // Add more languages as needed
+    };
+    return errorMessages[language] || errorMessages['en'];
+  }
+
+  /**
+   * Retrieves localized service unavailable error message
+   * @param language - The language of the user
+   * @returns string - Localized service unavailable error message
+   */
+  private getLocalizedServiceError(language: string): string {
+    const errorMessages: Record<string, string> = {
+      es: 'Tengo problemas para conectarme a mis servicios en este momento. Por favor, inténtalo de nuevo en unos minutos.',
+      fr: "J'ai des difficultés à me connecter à mes services pour le moment. Veuillez réessayer dans quelques minutes.",
+      // Add more languages as needed
+    };
+    return errorMessages[language] || errorMessages['en'];
+  }
+
+  /**
+   * Retrieves localized generic error message
+   * @param language - The language of the user
+   * @returns string - Localized generic error message
+   */
+  private getLocalizedGenericError(language: string): string {
+    const errorMessages: Record<string, string> = {
+      es: 'Algo salió mal al procesar tu mensaje. Por favor, inténtalo de nuevo más tarde.',
+      fr: "Une erreur s'est produite lors du traitement de votre message. Veuillez réessayer plus tard.",
+      // Add more languages as needed
+    };
+    return errorMessages[language] || errorMessages['en'];
   }
 
   /**

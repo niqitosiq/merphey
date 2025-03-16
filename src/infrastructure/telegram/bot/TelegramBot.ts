@@ -2,7 +2,7 @@
 import { MessageDispatcher } from './MessageDispatcher';
 import { TextMessageHandler } from '../handlers/TextMessageHandler';
 import { CommandHandler } from '../handlers/CommandHandler';
-import { MentalHealthApplication } from '../../../MentalHealthApplication';
+import { MentalHealthApplication } from '../../../application/MentalHealthApplication';
 import dotenv from 'dotenv';
 
 /**

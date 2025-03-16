@@ -1,4 +1,4 @@
-import { MentalHealthApplication } from '../MentalHealthApplication';
+import { MentalHealthApplication } from './MentalHealthApplication';
 import { startTelegramBot } from '../infrastructure/telegram/bot/TelegramBot';
 import { LLMAdapter } from '../infrastructure/llm/openai/LLMAdapter';
 import { ConversationRepository } from '../infrastructure/persistence/postgres/ConversationRepository';
@@ -10,7 +10,7 @@ import { StateTransitionService } from '../domain/services/state/StateTransition
 import { TransitionValidator } from '../domain/services/state/TransitionValidator';
 import { CrisisDetector } from '../domain/services/risk/CrisisDetector';
 import { PrismaClient } from '@prisma/client';
-import { ConversationService } from './services/SessionOrchestrator';
+import { ConversationService } from './services/ConversationService';
 import { MessageValidator } from '../shared/utils/safety-filter';
 import { MessageFactory } from '../domain/aggregates/conversation/entities/MessageFactory';
 import { GptResponseGenerator } from '../infrastructure/llm/openai/GptResponseGenerator';

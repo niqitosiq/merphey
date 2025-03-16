@@ -26,6 +26,7 @@ export interface AnalysisResult {
   };
   therapeuticOpportunities: string[];
   shouldBeRevised: boolean;
+  language: string;
 }
 
 /**
@@ -48,7 +49,9 @@ export class ContextAnalyzer {
     history: UserMessage[],
   ): Promise<AnalysisResult> {
     const prompt = this.constructAnalysisPrompt(message, plan, history);
-    const response = await this.llmService.generateCompletion(prompt);
+    const response = await this.llmService.generateCompletion(prompt, {
+      model: 'amazon/nova-micro-v1',
+    });
 
     try {
       return this.parseAnalysisResponse(response);
@@ -105,7 +108,8 @@ Provide a detailed analysis in JSON format covering:
     "openness": 0-1,
     "resistanceLevel": 0-1
   },
-  "therapeuticOpportunities": ["opportunity descriptions"]
+  "therapeuticOpportunities": ["opportunity descriptions"],
+  "language": "user language"
 }`;
   }
 

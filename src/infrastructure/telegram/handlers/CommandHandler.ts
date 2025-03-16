@@ -1,4 +1,4 @@
-import { MentalHealthApplication } from '../../../MentalHealthApplication';
+import { MentalHealthApplication } from '../../../application/MentalHealthApplication';
 import { ConversationState } from '../../../domain/shared/enums';
 
 /**

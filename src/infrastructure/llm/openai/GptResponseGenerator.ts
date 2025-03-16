@@ -14,6 +14,7 @@ export class GptResponseGenerator {
    * Generates a therapeutic response based on conversation context
    * @param currentState - Current conversation state
    * @param analysis - Analysis of user message
+   * @param userLanguage - ISO language code for the user's preferred language
    * @returns TherapeuticResponse - Contains response content and insights
    */
   async generateTherapeuticResponse(
@@ -21,13 +22,13 @@ export class GptResponseGenerator {
     analysis: AnalysisResult,
   ): Promise<TherapeuticResponse> {
     try {
-      // Build context-aware prompt
-      const prompt = this.buildTherapeuticPrompt(currentState, analysis);
+      // Build context-aware prompt that includes language instructions
+      const prompt = this.buildTherapeuticPrompt(currentState, analysis, analysis.language);
 
       // Generate response with specific parameters for therapeutic context
       const completion = await this.openai.generateCompletion(prompt, {
-        temperature: 0.7,
-        maxTokens: 2000,
+        temperature: 0.9,
+        maxTokens: 3000,
         presencePenalty: 0.6, // Encourage diverse responses
         frequencyPenalty: 0.2, // Reduce repetition
       });
@@ -86,12 +87,24 @@ export class GptResponseGenerator {
 
   /**
    * Constructs a comprehensive prompt for therapeutic response generation
+   * @param currentState - Current conversation state
+   * @param analysis - Analysis of user message
+   * @param userLanguage - The language to generate the response in
    */
   private buildTherapeuticPrompt(
     currentState: ConversationState,
     analysis: AnalysisResult,
+    userLanguage: string = 'en',
   ): string {
+    // Create language instruction based on user language
+    const languageInstruction =
+      userLanguage !== 'english'
+        ? `IMPORTANT: Only the "content" field should be in ${userLanguage} language as it will be shown directly to the user. All other fields (insights, suggestedTechniques, etc.) must remain in English for internal processing.`
+        : '';
+
     return `You are PsychoBot, an advanced therapeutic AI assistant trained in evidence-based psychological approaches. You're having a conversation with a person seeking mental health support.
+
+${languageInstruction}
 
 CURRENT CONVERSATION STATE: ${currentState}
 
@@ -114,14 +127,16 @@ RESPONSE INSTRUCTIONS:
 4. Focus on the most relevant therapeutic opportunity identified in the analysis
 5. Avoid giving direct advice; instead, help the person explore their own solutions
 6. Keep responses concise (2-4 sentences) and conversational
+7. The "content" field must be in ${userLanguage === 'en' ? 'English' : userLanguage} language as it will be shown to the user
+8. All other fields (insights, suggestedTechniques, etc.) must remain in English
 
 Your response should be formatted as JSON:
 {
-  "content": "Your therapeutic response here",
+  "content": "Your therapeutic response here in ${userLanguage === 'en' ? 'English' : userLanguage} language - THIS IS THE ONLY FIELD THAT SHOULD BE IN THE USER'S LANGUAGE",
   "insights": {
-    "positiveProgress": "Brief description of positive aspects you noticed",
-    "techniqueAdoption": "Specific technique you're employing and why",
-    "challenges": ["Ongoing challenge 1", "Potential obstacle 2"]
+    "positiveProgress": "Brief description of positive aspects you noticed (in English)",
+    "techniqueAdoption": "Specific technique you're employing and why (in English)",
+    "challenges": ["Ongoing challenge 1 (in English)", "Potential obstacle 2 (in English)"]
   },
   "suggestedTechniques": ["technique1", "technique2"]
 }`;
@@ -183,8 +198,11 @@ Your response should be formatted as JSON:
 
   /**
    * Provides a safe fallback response when normal generation fails
+   * @param state - Current conversation state
+   * @param language - ISO language code for the user's preferred language
    */
   private getFallbackResponse(state: ConversationState): TherapeuticResponse {
+    // Default English fallback responses
     const fallbackContent: Record<ConversationState, string> = {
       [ConversationState.INFO_GATHERING]:
         "I understand you're sharing something important. Could you tell me more about how that affected you?",
@@ -198,10 +216,12 @@ Your response should be formatted as JSON:
         "Thank you for sharing your thoughts today. Would it help to summarize what we've discussed?",
     };
 
+    let content =
+      fallbackContent[state] ||
+      "I'm here to listen and support you. Would you like to continue our conversation?";
+
     return {
-      content:
-        fallbackContent[state] ||
-        "I'm here to listen and support you. Would you like to continue our conversation?",
+      content,
       insights: {
         positiveProgress: 'Continuing the therapeutic dialogue',
         techniqueAdoption: 'Maintaining therapeutic presence',

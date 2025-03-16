@@ -36,31 +36,45 @@ export class EmergencyResponseGenerator {
    * @param messageContent - User message content that triggered emergency
    * @param riskFactors - Risk factors identified in the message
    * @param riskLevel - The assessed risk level
+   * @param userLanguage - ISO language code for the user's language
    * @returns EmergencyResponse - Contains response and crisis resources
    */
   async generateEmergencyResponse(
     messageContent: string,
     riskFactors: string[],
     riskLevel: RiskLevel,
+    userLanguage: string = 'en',
   ): Promise<EmergencyResponse> {
     try {
       // Get relevant crisis resources based on risk factors
       const relevantResources = await this.crisisResourceRepository.findByRiskFactors(riskFactors);
 
       // Generate crisis-appropriate response
-      const prompt = this.buildEmergencyPrompt(messageContent, riskFactors, riskLevel);
-      const completion = await this.openai.generateCompletion(prompt, {
+      const prompt = this.buildEmergencyPrompt(
+        messageContent,
+        riskFactors,
+        riskLevel,
+        userLanguage,
+      );
+
+      const response = await this.openai.generateCompletion(prompt, {
         temperature: 0.3, // Lower temperature for more consistent crisis responses
         maxTokens: 1000,
         presencePenalty: 0.0, // Stick to proven crisis intervention language
         frequencyPenalty: 0.0,
       });
 
-      // Analyze response for required actions
-      const actionAnalysis = await this.openai.analyzeText(completion, 'crisis_actions');
+      // Parse the JSON response
+      const parsedResponse = JSON.parse(response);
+
+      // Analyze response for required actions (kept in English)
+      const actionAnalysis = await this.openai.analyzeText(
+        parsedResponse.content,
+        'crisis_actions',
+      );
 
       return {
-        content: this.formatEmergencyResponse(completion, relevantResources),
+        content: parsedResponse.content,
         resources: relevantResources,
         metadata: {
           riskLevel,
@@ -69,8 +83,8 @@ export class EmergencyResponseGenerator {
         },
       };
     } catch (error) {
-      // Always provide a safe fallback in emergency situations
-      return this.getFallbackEmergencyResponse(riskLevel);
+      console.error('Error generating emergency response:', error);
+      return this.getFallbackEmergencyResponse(riskLevel, userLanguage);
     }
   }
 
@@ -81,35 +95,40 @@ export class EmergencyResponseGenerator {
     message: string,
     riskFactors: string[],
     riskLevel: RiskLevel,
+    userLanguage: string,
   ): string {
-    return `
-As a crisis support specialist, provide an immediate, supportive response to someone in crisis.
-Context: ${message}
+    const languageInstruction =
+      userLanguage !== 'en'
+        ? `IMPORTANT: Generate the "content" field in ${userLanguage} language as it will be shown directly to the user. All other fields must be in English for internal processing.`
+        : '';
+
+    return `You are a crisis support specialist providing immediate assistance to someone in crisis.
+
+${languageInstruction}
+
+CONTEXT:
+Message: ${message}
 Risk Factors: ${riskFactors.join(', ')}
 Risk Level: ${riskLevel}
 
-Required response elements:
+RESPONSE REQUIREMENTS:
 1. Immediate acknowledgment of their situation
 2. Clear expression of concern and support
 3. Direct but gentle safety inquiries
 4. Specific, actionable next steps
 5. Crisis resource information integration
 
-Response should be empathetic, clear, and focused on immediate safety.`;
+Generate a JSON response with the following structure:
+{
+  "content": "Your crisis response here in ${userLanguage === 'en' ? 'English' : userLanguage} - THIS IS THE ONLY FIELD THAT SHOULD BE IN THE USER'S LANGUAGE",
+  "requiredActions": ["action1_in_english", "action2_in_english"],
+  "safetyPlan": {
+    "immediateSteps": ["step1_in_english", "step2_in_english"],
+    "copingStrategies": ["strategy1_in_english", "strategy2_in_english"]
   }
+}
 
-  /**
-   * Formats the emergency response with integrated crisis resources
-   */
-  private formatEmergencyResponse(
-    baseResponse: string,
-    resources: Array<{ name: string; contact: string; description: string }>,
-  ): string {
-    const resourceSection = resources
-      .map((r) => `${r.name} (${r.contact}): ${r.description}`)
-      .join('\n');
-
-    return `${baseResponse}\n\nImmediate Support Resources:\n${resourceSection}`;
+Response must be empathetic, clear, and focused on immediate safety.`;
   }
 
   /**
@@ -133,8 +152,14 @@ Response should be empathetic, clear, and focused on immediate safety.`;
 
   /**
    * Provides a safe fallback response for emergency situations
+   * @param riskLevel - The assessed risk level
+   * @param language - User's language
    */
-  private getFallbackEmergencyResponse(riskLevel: RiskLevel): EmergencyResponse {
+  private getFallbackEmergencyResponse(
+    riskLevel: RiskLevel,
+    language: string = 'en',
+  ): EmergencyResponse {
+    // Define default resources in English
     const defaultResources = [
       {
         name: 'Crisis Helpline',
@@ -143,12 +168,35 @@ Response should be empathetic, clear, and focused on immediate safety.`;
       },
     ];
 
+    // Define content based on language
+    let content: string;
+
+    switch (language) {
+      case 'es':
+        content =
+          'Me preocupa mucho tu seguridad en este momento. ' +
+          'Por favor, debes saber que hay ayuda disponible las 24 horas a través de la línea de crisis 988. ' +
+          'Son profesionales capacitados que quieren ayudar. ' +
+          '¿Estarías dispuesto a llamarlos o preferirías seguir hablando aquí primero?';
+        break;
+      case 'fr':
+        content =
+          'Je suis très inquiet pour votre sécurité en ce moment. ' +
+          "Sachez qu'une aide est disponible 24h/24 via la ligne de crise au 988. " +
+          'Ce sont des professionnels formés qui souhaitent vous aider. ' +
+          "Seriez-vous prêt à les appeler ou préféreriez-vous continuer à parler ici d'abord ?";
+        break;
+      default:
+        content =
+          "I'm very concerned about your safety right now. " +
+          'Please know that help is available 24/7 through the crisis helpline at 988. ' +
+          'They are trained professionals who want to help. ' +
+          'Would you be willing to call them or would you like to continue talking here first?';
+    }
+
+    // Return emergency response with all metadata in English
     return {
-      content:
-        "I'm very concerned about your safety right now. " +
-        'Please know that help is available 24/7 through the crisis helpline at 988. ' +
-        'They are trained professionals who want to help. ' +
-        'Would you be willing to call them or would you like to continue talking here first?',
+      content,
       resources: defaultResources,
       metadata: {
         riskLevel,

@@ -62,6 +62,43 @@ export class LLMAdapter implements LlmPort {
   }
 
   /**
+   * Detects the language of the provided text
+   * @param text - Text to analyze for language
+   * @returns Promise<string> - ISO language code (e.g., 'en', 'es', 'fr')
+   */
+  async detectLanguage(text: string): Promise<string> {
+    try {
+      const prompt = `Analyze the following text and determine the language. Return only the ISO 639-1 language code (e.g., 'en' for English, 'es' for Spanish, 'fr' for French) without quotes or any other text: "${text}"`;
+
+      const response = await this.makeRequest('/chat/completions', {
+        model: this.defaultModel,
+        messages: [
+          {
+            role: 'user',
+            content: prompt,
+          },
+        ],
+        temperature: 0.1, // Lower temperature for more consistent analytical results
+        max_tokens: 10, // We only need a short response
+      });
+
+      if (!response.choices?.[0]?.message?.content) {
+        throw new LlmServiceError('NO_LANGUAGE_DETECTION', 'No language detected');
+      }
+
+      // Extract just the language code from the response
+      const languageCode = response.choices[0].message.content
+        .trim()
+        .toLowerCase()
+        .match(/^[a-z]{2}$/);
+      return languageCode ? languageCode[0] : 'en'; // Default to English if no valid code is detected
+    } catch (error: unknown) {
+      console.error('Language detection error:', error);
+      return 'en'; // Default to English on error
+    }
+  }
+
+  /**
    * Generates text completion from a prompt
    * @param prompt - The prompt to complete
    * @param options - Additional model options
@@ -69,12 +106,20 @@ export class LLMAdapter implements LlmPort {
    */
   async generateCompletion(prompt: string, options?: any): Promise<string> {
     try {
+      // Add language instruction if specified in options
+      const languageInstruction =
+        options?.language && options.language !== 'en'
+          ? `Respond in ${options.language} language. `
+          : '';
+
+      const modifiedPrompt = languageInstruction + prompt;
+
       const response = await this.makeRequest('/chat/completions', {
         model: options?.model || this.defaultModel,
         messages: [
           {
             role: 'user',
-            content: prompt,
+            content: modifiedPrompt,
           },
         ],
         temperature: options?.temperature || 0.7,
@@ -171,6 +216,7 @@ export class LLMAdapter implements LlmPort {
       emotion: `Analyze the emotions in the following text and return a JSON object with detected emotions and their confidence scores (0-1): "${text}"`,
       risk: `Assess the risk level in the following text and return a JSON object with 'riskLevel' (none, low, medium, high, critical) and 'concerns' (array of identified issues): "${text}"`,
       topics: `Identify the main topics in the following text and return a JSON array of topic strings: "${text}"`,
+      language: `Detect the language of the following text and return a JSON object with 'languageCode' (ISO 639-1 format) and 'confidence' (0-1): "${text}"`,
     };
 
     return (

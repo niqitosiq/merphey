@@ -1,22 +1,22 @@
-import { ConversationService } from './application/services/SessionOrchestrator';
-import { MessageValidator } from './shared/utils/safety-filter';
-import { MessageFactory } from './domain/aggregates/conversation/entities/MessageFactory';
-import { RiskAssessor } from './domain/services/risk/RiskAssessmentService';
+import { ConversationService } from './services/ConversationService';
+import { MessageValidator } from '../shared/utils/safety-filter';
+import { MessageFactory } from '../domain/aggregates/conversation/entities/MessageFactory';
+import { RiskAssessor } from '../domain/services/risk/RiskAssessmentService';
 
-import { ContextAnalyzer } from './domain/services/analysis/CognitiveAnalysisService';
-import { StateTransitionService } from './domain/services/state/StateTransitionService';
-import { GptResponseGenerator } from './infrastructure/llm/openai/GptResponseGenerator';
-import { PlanEvolutionService } from './domain/aggregates/therapy/services/PlanEvolutionService';
-import { ProgressTracker } from './application/services/ProgressTracker';
-import { ResponseComposer } from './application/services/ProgressTracker';
-import { ErrorHandler } from './shared/errors/application-errors';
+import { ContextAnalyzer } from '../domain/services/analysis/CognitiveAnalysisService';
+import { StateTransitionService } from '../domain/services/state/StateTransitionService';
+import { GptResponseGenerator } from '../infrastructure/llm/openai/GptResponseGenerator';
+import { PlanEvolutionService } from '../domain/aggregates/therapy/services/PlanEvolutionService';
+import { ProgressTracker } from './services/ProgressTracker';
+import { ResponseComposer } from './services/ProgressTracker';
+import { ErrorHandler } from '../shared/errors/application-errors';
 
 import {
   ConversationContext,
   SessionResponse,
   ProcessingResult,
-} from './domain/aggregates/conversation/entities/types';
-import { Message } from './domain/aggregates/conversation/entities/Message';
+} from '../domain/aggregates/conversation/entities/types';
+import { Message } from '../domain/aggregates/conversation/entities/Message';
 
 /**
  * Main application class that orchestrates the mental health chatbot workflow
@@ -131,10 +131,6 @@ export class MentalHealthApplication {
 
     // Phase 4: Therapeutic response generation
     // Generates an appropriate therapeutic response based on:
-    const therapeuticResponse = await this.responseGenerator.generateTherapeuticResponse(
-      context.currentState,
-      analysis,
-    );
     // - Current conversation state
     // - Risk assessment
     // - Contextual analysis
@@ -146,6 +142,11 @@ export class MentalHealthApplication {
     let updatedVersion = await this.planService.revisePlan(
       context.therapeuticPlan,
       context,
+      analysis,
+    );
+
+    const therapeuticResponse = await this.responseGenerator.generateTherapeuticResponse(
+      context.currentState,
       analysis,
     );
 
