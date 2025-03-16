@@ -64,11 +64,12 @@ export class RiskAssessor {
 
   private async analyzeSentiment(message: string): Promise<SentimentAnalysis> {
     const prompt = `Analyze the sentiment and emotion in this message: "${message}"
-    Return in JSON format:
+    Return only JSON formatted:
     {
       "score": number between 0-1 (0 being most negative, 1 being most positive),
       "primaryEmotion": string,
-      "emotionalIntensity": number between 0-1
+      "emotionalIntensity": number between 0-1,
+      "reason": "..."
     }`;
 
     const response = await this.llmService.generateCompletion(prompt);

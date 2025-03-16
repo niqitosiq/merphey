@@ -13,7 +13,7 @@ export type ConversationContext = {
   currentState: ConversationState;
   history: UserMessage[];
   riskHistory: RiskAssessment[];
-  therapeuticPlan?: TherapeuticPlan;
+  therapeuticPlan: TherapeuticPlan;
 };
 
 /**
@@ -78,7 +78,7 @@ export interface ProcessingResult {
   /**
    * Any updates to the therapeutic plan
    */
-  planUpdate: TherapeuticPlan;
+  updatedVersion: PlanVersion | null;
 
   /**
    * Session progress metrics
@@ -170,3 +170,16 @@ export type Metadata = Record<string, any> & {
   sessionProgress?: SessionProgress;
   timestamp?: number;
 };
+
+export interface SessionStats {
+  totalMessages: number;
+  duration: number;
+  engagementScore: number;
+  techniqueAdoption: number;
+}
+
+export interface ProgressInsights {
+  recentInsights: string[];
+  breakthroughs: string[];
+  challenges: string[];
+}

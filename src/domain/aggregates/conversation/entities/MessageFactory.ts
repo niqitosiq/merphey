@@ -1,4 +1,3 @@
-import { JsonValue } from '@prisma/client/runtime/library';
 import { Message } from './Message';
 import { v4 as uuidv4 } from 'uuid';
 import { Metadata } from './types';
@@ -22,14 +21,14 @@ export class MessageFactory {
       params.content,
       params.role,
       params.conversationId,
-      params.metadata || null,
+      params.metadata || {},
       new Date(),
     );
   }
   /**
    * Creates an assistant message
    */
-  createAssistantMessage(conversationId: string, content: string, metadata?: Metadata): Message {
+  createAssistantMessage(conversationId: string, content: string, metadata: Metadata): Message {
     return Message.createAssistantMessage(conversationId, content, metadata);
   }
 
@@ -49,7 +48,7 @@ export class MessageFactory {
       data.content,
       data.role,
       data.conversationId,
-      data.metadata,
+      data.metadata || {},
       data.createdAt,
     );
   }

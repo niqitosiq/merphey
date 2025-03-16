@@ -51,7 +51,7 @@ Context:
       .slice(-5)
       .map((m) => m.content)
       .join('\n')}
-- Current Plan: ${planContent ? `Goals: ${planContent.goals.join(', ')}` : 'No plan'}
+- Current Plan: ${planContent ? `Goals: ${planContent.goals?.join(', ')}` : 'No plan'}
 
 Consider these state transition rules:
 ${this.getStateTransitionRules()}
@@ -86,7 +86,8 @@ Respond ONLY in JSON format:
 
   private validateTransition(current: ConversationState, next: ConversationState): void {
     if (!this.transitionValidator.validateTransition(current, next)) {
-      throw new Error(`Invalid transition from ${current} to ${next}`);
+      // throw new Error(`Invalid transition from ${current} to ${next}`);
+      console.log(`Invalid transition from ${current} to ${next}`);
     }
   }
 

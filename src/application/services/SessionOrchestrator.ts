@@ -3,14 +3,14 @@ import {
   UserMessage,
   ProcessingResult,
   SessionResponse,
+  Metadata,
 } from '../../domain/aggregates/conversation/entities/types';
 import { ConversationRepository } from '../../infrastructure/persistence/postgres/ConversationRepository';
 import { TherapeuticPlanRepository } from '../../infrastructure/persistence/postgres/PlanRepository';
-import { ContextLoader } from '../../shared/utils/context-loader';
 import { ConversationState, RiskLevel } from '@prisma/client';
 import { ApplicationError } from '../../shared/errors/application-errors';
-import { TherapeuticPlan } from 'src/domain/aggregates/therapy/entities/TherapeuticPlan';
-import { Message } from 'src/domain/aggregates/conversation/entities/Message';
+import { Message } from '@prisma/client';
+import { UserRepository } from 'src/infrastructure/persistence/postgres/UserRepository';
 
 /**
  * Application service responsible for managing conversation lifecycle
@@ -20,8 +20,58 @@ export class ConversationService {
   constructor(
     private conversationRepository: ConversationRepository,
     private planRepository: TherapeuticPlanRepository,
-    private contextLoader: ContextLoader,
+    private userRepository: UserRepository,
   ) {}
+
+  generateId(): string {
+    return `msg_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+  }
+
+  async initializeConversationContext(userId: string): Promise<ConversationContext> {
+    try {
+      let user = await this.userRepository.findById(userId);
+
+      if (!user) {
+        user = await this.userRepository.createUser(userId);
+      }
+
+      console.log(user, 'user');
+
+      const newConversation = await this.conversationRepository.createConversation({
+        userId,
+        state: ConversationState.INFO_GATHERING,
+      });
+
+      const therapeuticPlan = await this.planRepository.createPlan({
+        userId,
+        initialContent: {
+          goals: ['get to know the person better', 'establish contact', 'find out why user came'],
+          approach: 'open-ended questions',
+          techniques: ['active listening', 'empathy'],
+        },
+      });
+
+      await this.conversationRepository.updateTherapeuticPlan(
+        newConversation.id,
+        therapeuticPlan.id,
+      );
+
+      return {
+        conversationId: newConversation.id,
+        userId: newConversation.userId,
+        currentState: newConversation.state,
+        history: [],
+        riskHistory: [],
+        therapeuticPlan,
+      };
+    } catch (error) {
+      throw new ApplicationError(
+        'Failed to initialize conversation context',
+        `User ID: ${userId}; Original error: ${error}`,
+        'HIGH',
+      );
+    }
+  }
 
   /**
    * Retrieves or creates conversation context for a user
@@ -31,66 +81,63 @@ export class ConversationService {
    */
   async getConversationContext(userId: string): Promise<ConversationContext> {
     try {
-      // Try to retrieve existing conversation
       const existingConversation = await this.conversationRepository.findLatestByUserId(userId);
 
-      // If no existing conversation, create a new one
       if (!existingConversation) {
-        const newConversation = await this.conversationRepository.createConversation({
-          userId,
-          state: ConversationState.INFO_GATHERING,
-        });
-
-        return {
-          conversationId: newConversation.id,
-          userId: newConversation.userId,
-          currentState: newConversation.state,
-          history: [],
-          riskHistory: [],
-          therapeuticPlan: undefined,
-        };
+        return this.initializeConversationContext(userId);
       }
 
-      // Load conversation history with appropriate depth
-      const messageHistory = await this.conversationRepository.getMessageHistory(
-        existingConversation.id,
-        15, // Configurable history depth
-      );
+      const messageHistory = (
+        await this.conversationRepository.getMessageHistory(existingConversation.id, 15)
+      ).map((msg) => ({
+        ...msg,
+        metadata: msg.metadata as Metadata | undefined,
+        context: existingConversation.state,
+      })) as UserMessage[];
 
-      // Load risk assessment history
       const riskHistory = await this.conversationRepository.getRiskHistory(
         existingConversation.id,
-        10, // Configurable risk history depth
+        10,
       );
 
-      // Load therapeutic plan if one exists
-      let therapeuticPlan: TherapeuticPlan | undefined;
-      if (existingConversation.currentPlanId) {
-        therapeuticPlan = await this.planRepository.findById(existingConversation.currentPlanId);
-      }
-
-      // Build context vector for semantic understanding
-      const contextVector = this.contextLoader.buildContextVector(
-        messageHistory,
-        riskHistory,
-        existingConversation.state,
-      );
-
-      // Update context vector if needed
-      if (existingConversation.contextVector !== contextVector) {
-        await this.conversationRepository.updateContextVector(
-          existingConversation.id,
-          contextVector,
+      if (!existingConversation.currentPlanId) {
+        throw new ApplicationError(
+          'No therapeutic plan found for conversation',
+          `Conversation ID: ${existingConversation.id}`,
+          'MEDIUM',
         );
       }
+
+      let therapeuticPlan = await this.planRepository.findById(existingConversation.currentPlanId);
+
+      if (!therapeuticPlan) {
+        throw new ApplicationError(
+          'Therapeutic plan not found',
+          `Plan ID: ${existingConversation.currentPlanId}`,
+          'MEDIUM',
+        );
+      }
+
+      // const contextVector = this.contextLoader.buildContextVector(
+      //   messageHistory,
+      //   riskHistory,
+      //   existingConversation.state,
+      // );
+
+      // if (existingConversation.contextVector !== contextVector) {
+      //   await this.conversationRepository.updateContextVector(
+      //     existingConversation.id,
+      //     contextVector,
+      //   );
+      // }
 
       return {
         conversationId: existingConversation.id,
         userId: existingConversation.userId,
         currentState: existingConversation.state,
         history: messageHistory,
-        riskHistory: riskHistory,
-        therapeuticPlan: therapeuticPlan,
+        riskHistory,
+        therapeuticPlan,
       };
     } catch (error) {
       throw new ApplicationError(
@@ -137,15 +184,15 @@ export class ConversationService {
     processingResult: ProcessingResult,
   ): Promise<ConversationContext> {
     try {
-      // Store the new user message
-      await this.conversationRepository.saveMessage({
+      const savedUserMessage = await this.conversationRepository.saveMessage({
         conversationId: context.conversationId,
         content: userMessage.content,
         role: 'user',
-        metadata: userMessage.metadata || {},
+        metadata: userMessage.metadata as Metadata,
       });
 
-      // Store the assistant response message
+      console.log(JSON.stringify(savedUserMessage), 'savedUserMessage');
+
       const assistantMessage = await this.conversationRepository.saveMessage({
         conversationId: context.conversationId,
         content: processingResult.therapeuticResponse.content,
@@ -156,7 +203,8 @@ export class ConversationService {
         },
       });
 
-      // Update conversation state if transition occurred
+      console.log(JSON.stringify(assistantMessage), 'assistantMessage');
+
       if (processingResult.stateTransition.from !== processingResult.stateTransition.to) {
         await this.conversationRepository.updateState(
           context.conversationId,
@@ -164,7 +212,6 @@ export class ConversationService {
         );
       }
 
-      // Record new risk assessment
       const riskAssessment = await this.conversationRepository.saveRiskAssessment({
         conversationId: context.conversationId,
         level: processingResult.riskAssessment.level,
@@ -172,72 +219,71 @@ export class ConversationService {
         score: processingResult.riskAssessment.score,
       });
 
-      // Update or create therapeutic plan if needed
-      let updatedPlan = context.therapeuticPlan;
-      if (processingResult.planUpdate.revisionRequired) {
-        if (processingResult.planUpdate.newVersionId && context.therapeuticPlan) {
-          // Update plan with new version
-          updatedPlan = await this.planRepository.findById(context.therapeuticPlan.id);
-        } else if (!context.therapeuticPlan) {
-          // Create new plan if none exists
-          updatedPlan = await this.planRepository.createPlan({
-            userId: context.userId,
-            initialContent: {
-              goals: [],
-              techniques: processingResult.therapeuticResponse.suggestedTechniques || [],
-              insights: processingResult.therapeuticResponse.insights || {},
-              approach: processingResult.planUpdate,
-            },
-          });
+      console.log(JSON.stringify(riskAssessment), 'riskAssessment');
 
-          // Associate plan with conversation
-          await this.conversationRepository.updateTherapeuticPlan(
-            context.conversationId,
-            updatedPlan.id,
+      if (!!processingResult.updatedVersion) {
+        const currentPlan = context.therapeuticPlan;
+        const updatedPlanVersion = processingResult.updatedVersion;
+
+        if (currentPlan) {
+          await this.planRepository.createPlanVersion(
+            currentPlan.id,
+            currentPlan.currentVersionId,
+            updatedPlanVersion.content || {},
+            updatedPlanVersion.validationScore || 1,
           );
         }
+
+        console.log(JSON.stringify(currentPlan), 'currentPlan');
       }
 
-      // Update context vector with new interaction data
+      // Convert messages to UserMessage type with proper metadata
+      const convertToUserMessage = (msg: Message): UserMessage => ({
+        id: msg.id,
+        conversationId: msg.conversationId,
+        content: msg.content,
+        role: msg.role,
+        metadata: msg.metadata as Metadata,
+        context: processingResult.stateTransition.to,
+        createdAt: msg.createdAt,
+      });
+
       const updatedHistory = [
         ...context.history,
-        userMessage,
-        {
+        convertToUserMessage(savedUserMessage),
+        convertToUserMessage({
           ...assistantMessage,
           metadata: {
             suggestedTechniques: processingResult.therapeuticResponse.suggestedTechniques || [],
             insights: processingResult.therapeuticResponse.insights || {},
           },
-        },
+        }),
       ];
 
       const updatedRiskHistory = [...context.riskHistory, riskAssessment];
 
-      const newContextVector = this.contextLoader.buildContextVector(
-        updatedHistory,
-        updatedRiskHistory,
-        processingResult.stateTransition.to,
-      );
+      // const newContextVector = this.contextLoader.buildContextVector(
+      //   updatedHistory,
+      //   updatedRiskHistory,
+      //   processingResult.stateTransition.to,
+      // );
 
-      await this.conversationRepository.updateContextVector(
-        context.conversationId,
-        newContextVector,
-      );
+      // await this.conversationRepository.updateContextVector(
+      //   context.conversationId,
+      //   newContextVector,
+      // );
 
-      // Return updated conversation context
       return {
         conversationId: context.conversationId,
         userId: context.userId,
         currentState: processingResult.stateTransition.to,
         history: updatedHistory,
         riskHistory: updatedRiskHistory,
-        therapeuticPlan: updatedPlan,
+        therapeuticPlan: context.therapeuticPlan,
       };
-    } catch (error) {
-      throw new ApplicationError(
-        'Failed to persist conversation updates',
-        `${{ conversationId: context.conversationId, originalError: error }}`,
-        'LOW',
+    } catch (error: any) {
+      throw new Error(
+        `Failed to persist conversation flow: ${error.message}; User ID: ${context.userId}`,
       );
     }
   }
@@ -267,10 +313,26 @@ export class ConversationService {
   }
 
   /**
-   * Generate a unique ID for entities
-   * @returns string - A unique ID
+   * Resets the conversation state for a user
+   * @param userId - The user identifier
+   * @returns Promise<void>
    */
-  private generateId(): string {
-    return `msg_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+  async resetConversationState(userId: string): Promise<void> {
+    try {
+      const existingConversation = await this.conversationRepository.findLatestByUserId(userId);
+
+      if (existingConversation) {
+        await this.conversationRepository.updateState(
+          existingConversation.id,
+          ConversationState.INFO_GATHERING,
+        );
+      }
+    } catch (error) {
+      throw new ApplicationError(
+        'Failed to reset conversation state',
+        `User ID: ${userId}; Original error: ${error}`,
+        'HIGH',
+      );
+    }
   }
 }

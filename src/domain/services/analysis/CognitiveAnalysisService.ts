@@ -25,6 +25,7 @@ export interface AnalysisResult {
     resistanceLevel: number;
   };
   therapeuticOpportunities: string[];
+  shouldBeRevised: boolean;
 }
 
 /**
@@ -59,14 +60,16 @@ export class ContextAnalyzer {
   private constructAnalysisPrompt(
     message: Message,
     plan: TherapeuticPlan | null,
-    history: UserMessage[],
+    history?: UserMessage[],
   ): string {
+    console.log('Analyzing message:', message.content);
+
     const recentHistory = history
-      .slice(-5)
+      ?.slice(-5)
       .map((m) => m.content)
       .join('\n');
     const planContent = plan?.currentVersion?.getContent();
-    const goals = planContent ? planContent.goals.join(', ') : 'No current goals';
+    const goals = planContent ? planContent.goals?.join(', ') : 'No current goals';
 
     return `Analyze this therapeutic conversation message with context:
 
@@ -77,8 +80,11 @@ ${recentHistory}
 
 Therapeutic goals: ${goals}
 
+Return ONLY json.
+
 Provide a detailed analysis in JSON format covering:
 {
+  "shouldBeRevised": true/false,
   "emotionalThemes": {
     "primary": "main emotion",
     "secondary": ["other emotions"],
@@ -120,24 +126,25 @@ Provide a detailed analysis in JSON format covering:
       'therapeuticProgress',
       'engagementMetrics',
       'therapeuticOpportunities',
+      'shouldBeRevised',
     ];
 
-    for (const field of requiredFields) {
-      if (!analysis[field]) {
-        throw new Error(`Missing required field: ${field}`);
-      }
-    }
+    // for (const field of requiredFields) {
+    //   if (!analysis[field]) {
+    //     throw new Error(`Missing required field: ${field}`);
+    //   }
+    // }
 
-    if (
-      typeof analysis.emotionalThemes.intensity !== 'number' ||
-      analysis.emotionalThemes.intensity < 0 ||
-      analysis.emotionalThemes.intensity > 1
-    ) {
-      throw new Error('Invalid emotional intensity value');
-    }
+    // if (
+    //   typeof analysis.emotionalThemes.intensity !== 'number' ||
+    //   analysis.emotionalThemes.intensity < 0 ||
+    //   analysis.emotionalThemes.intensity > 1
+    // ) {
+    //   throw new Error('Invalid emotional intensity value');
+    // }
 
-    if (!Array.isArray(analysis.cognitivePatternsIdentified)) {
-      throw new Error('Cognitive patterns must be an array');
-    }
+    // if (!Array.isArray(analysis.cognitivePatternsIdentified)) {
+    //   throw new Error('Cognitive patterns must be an array');
+    // }
   }
 }

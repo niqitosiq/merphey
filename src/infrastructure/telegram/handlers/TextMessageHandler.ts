@@ -74,20 +74,20 @@ export class TextMessageHandler {
     let formattedResponse = response.message;
 
     // Add progress information if available
-    if (response.progress && response.progress.insights && response.progress.insights.length > 0) {
-      formattedResponse += '\n\n_Progress insights:_\n';
-      response.progress.insights.forEach((insight) => {
-        formattedResponse += `- ${insight}\n`;
-      });
-    }
+    // if (response.progress && response.progress.insights && response.progress.insights.length > 0) {
+    //   formattedResponse += '\n\n_Progress insights:_\n';
+    //   response.progress.insights.forEach((insight) => {
+    //     formattedResponse += `- ${insight}\n`;
+    //   });
+    // }
 
-    // Add resources if available
-    if (response.resources && response.resources.length > 0) {
-      formattedResponse += '\n\n_Helpful resources:_\n';
-      response.resources.forEach((resource) => {
-        formattedResponse += `- [${resource.name}](${resource.url})\n`;
-      });
-    }
+    // // Add resources if available
+    // if (response.resources && response.resources.length > 0) {
+    //   formattedResponse += '\n\n_Helpful resources:_\n';
+    //   response.resources.forEach((resource) => {
+    //     formattedResponse += `- [${resource.name}](${resource.url})\n`;
+    //   });
+    // }
 
     return formattedResponse;
   }

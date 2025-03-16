@@ -8,11 +8,16 @@ export class TransitionValidator {
   private readonly allowedTransitions = new Map<ConversationState, ConversationState[]>([
     [
       ConversationState.INFO_GATHERING,
-      [ConversationState.ACTIVE_GUIDANCE, ConversationState.EMERGENCY_INTERVENTION],
+      [
+        ConversationState.ACTIVE_GUIDANCE,
+        ConversationState.EMERGENCY_INTERVENTION,
+        ConversationState.INFO_GATHERING,
+      ],
     ],
     [
       ConversationState.ACTIVE_GUIDANCE,
       [
+        ConversationState.ACTIVE_GUIDANCE,
         ConversationState.PLAN_REVISION,
         ConversationState.INFO_GATHERING,
         ConversationState.EMERGENCY_INTERVENTION,
@@ -21,11 +26,19 @@ export class TransitionValidator {
     ],
     [
       ConversationState.PLAN_REVISION,
-      [ConversationState.ACTIVE_GUIDANCE, ConversationState.EMERGENCY_INTERVENTION],
+      [
+        ConversationState.PLAN_REVISION,
+        ConversationState.ACTIVE_GUIDANCE,
+        ConversationState.EMERGENCY_INTERVENTION,
+      ],
     ],
     [
       ConversationState.EMERGENCY_INTERVENTION,
-      [ConversationState.INFO_GATHERING, ConversationState.SESSION_CLOSING],
+      [
+        ConversationState.EMERGENCY_INTERVENTION,
+        ConversationState.INFO_GATHERING,
+        ConversationState.SESSION_CLOSING,
+      ],
     ],
   ]);
 

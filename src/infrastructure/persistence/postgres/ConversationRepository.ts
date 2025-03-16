@@ -115,7 +115,6 @@ export class ConversationRepository {
         id: conversation.id,
         userId: conversation.userId,
         state: conversation.state,
-        contextVector: null,
       },
     });
   }
@@ -178,7 +177,7 @@ export class ConversationRepository {
         conversationId: data.conversationId,
         content: data.content,
         role: data.role,
-        metadata: JSON.stringify(data.metadata),
+        metadata: data.metadata,
       },
     });
   }

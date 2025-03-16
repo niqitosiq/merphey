@@ -13,9 +13,9 @@ import { TherapeuticPlan } from './TherapeuticPlan';
 // }
 
 export interface PlanContent {
-  goals: string[];
-  techniques: string[];
-  approach: string;
+  goals?: string[];
+  techniques?: string[];
+  approach?: string;
   metrics?: {
     completedGoals?: string[];
     [key: string]: any;

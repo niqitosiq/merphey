@@ -27,11 +27,12 @@ export class CrisisDetector {
   async scanForRiskPatterns(message: string): Promise<CrisisPattern> {
     try {
       const prompt = `Analyze this message for crisis patterns and risk indicators: "${message}"
-      Return in JSON format:
+      Return only JSON format answer:
       {
         "identifiedPatterns": [list of identified risk patterns],
         "overallSeverity": number between 0-1,
-        "requiresImmediateAction": boolean
+        "requiresImmediateAction": boolean,
+        "reason": "..."
       }
       Focus on identifying:
       - Suicidal ideation or self-harm

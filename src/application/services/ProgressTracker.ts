@@ -5,6 +5,8 @@ import {
   TherapeuticResponse,
   SessionProgress,
   UserMessage,
+  SessionStats,
+  ProgressInsights,
 } from '../../domain/aggregates/conversation/entities/types';
 
 /**
@@ -201,6 +203,61 @@ export class ProgressTracker {
       breakthroughScore * weights.breakthroughs +
       challengeImpact * weights.challenges
     );
+  }
+
+  /**
+   * Gets statistics for the current session
+   * @param context - Current conversation context
+   * @returns Promise<SessionStats>
+   */
+  async getSessionStats(context: ConversationContext): Promise<SessionStats> {
+    const userMessages = context.history.filter((msg) => msg.role === 'user');
+    const duration = this.calculateSessionDuration(context.history);
+
+    return {
+      totalMessages: userMessages.length,
+      duration,
+      engagementScore: this.calculateEngagementScore(context.history),
+      techniqueAdoption: this.calculateTechniqueAdoptionScore(context.history),
+    };
+  }
+
+  /**
+   * Gets insights about the therapeutic progress
+   * @param context - Current conversation context
+   * @returns Promise<ProgressInsights>
+   */
+  async getProgressInsights(context: ConversationContext): Promise<ProgressInsights> {
+    const therapeuticResponse = context.history
+      .filter((msg) => msg.role === 'assistant')
+      .find((msg) => msg.metadata?.insights) as unknown as TherapeuticResponse;
+
+    return {
+      recentInsights: therapeuticResponse?.insights?.positiveProgress
+        ? [therapeuticResponse.insights.positiveProgress]
+        : [],
+      breakthroughs: this.identifyBreakthroughs(
+        context.history,
+        therapeuticResponse || {
+          content: '',
+          insights: { positiveProgress: '', techniqueAdoption: '', challenges: [] },
+        },
+      ),
+      challenges: this.identifyChallenges(
+        context.history,
+        therapeuticResponse || {
+          content: '',
+          insights: { positiveProgress: '', techniqueAdoption: '', challenges: [] },
+        },
+      ),
+    };
+  }
+
+  private calculateSessionDuration(history: UserMessage[]): number {
+    if (history.length < 2) return 0;
+    const firstMessage = history[0];
+    const lastMessage = history[history.length - 1];
+    return lastMessage.createdAt.getTime() - firstMessage.createdAt.getTime();
   }
 }
 

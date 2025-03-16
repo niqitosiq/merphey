@@ -2,7 +2,9 @@ import { LLMAdapter } from 'src/infrastructure/llm/openai/LLMAdapter';
 import { TherapeuticPlanRepository } from 'src/infrastructure/persistence/postgres/PlanRepository';
 import { ConversationContext } from '../../conversation/entities/types';
 import { TherapeuticPlan } from '../entities/TherapeuticPlan';
-import { PlanContent } from '../entities/PlanVersion';
+import { PlanContent, PlanVersion } from '../entities/PlanVersion';
+import { randomUUID } from 'crypto';
+import { AnalysisResult } from 'src/domain/services/analysis/CognitiveAnalysisService';
 
 interface PlanValidationResult {
   isValid: boolean;
@@ -26,20 +28,31 @@ export class PlanEvolutionService {
     };
   }
 
-  async createInitialPlan(userId: string): Promise<TherapeuticPlan> {
+  async createInitialPlan(currentPlan: TherapeuticPlan) {
     const initialContent = this.generateInitialPlan();
 
-    return await this.planRepository.createPlan({
-      userId,
-      initialContent,
-    });
+    return new PlanVersion(
+      randomUUID(),
+      currentPlan.id,
+      null,
+      JSON.stringify(initialContent),
+      null,
+      1,
+      new Date(),
+    );
   }
 
   async revisePlan(
     existingPlan: TherapeuticPlan,
     contextUpdate: ConversationContext,
-  ): Promise<TherapeuticPlan> {
+    analysis: AnalysisResult,
+  ) {
     // Validate existing plan has a current version
+
+    if (analysis.shouldBeRevised) {
+      return null;
+    }
+
     if (!existingPlan.currentVersion) {
       throw new Error('Cannot revise plan: no current version exists');
     }
@@ -52,30 +65,22 @@ export class PlanEvolutionService {
       const parsedContent = await this.getValidatedPlanContent(prompt);
 
       // Validate the new plan against the previous one
-      const validation = await this.validatePlanRevision(
-        existingPlan.currentVersion.content as unknown as PlanContent,
-        parsedContent,
-      );
+      // const validation = await this.validatePlanRevision(
+      //   existingPlan.currentVersion.content as unknown as PlanContent,
+      //   parsedContent,
+      // );
 
-      if (!validation.isValid) {
-        throw new PlanValidationError(validation.errors);
-      }
-
-      // Create new version and update the plan
+      // if (!validation.isValid) {
+      //   // throw new PlanValidationError(validation.errors);
+      // }
       const newVersion = existingPlan.createNewVersion(parsedContent);
 
-      const updated = await this.planRepository.updateVersionContent(existingPlan.id, newVersion);
+      // Create new version and update the plan
+
+      // const updated = await this.planRepository.updateVersionContent(existingPlan.id, newVersion);
 
       // Save the updated plan and return
-      return new TherapeuticPlan(
-        updated.id,
-        existingPlan.userId,
-        existingPlan.versions.concat(newVersion),
-        newVersion,
-        newVersion.id,
-        existingPlan.createdAt,
-        new Date(),
-      );
+      return newVersion;
     } catch (error: any) {
       // Rethrow PlanValidationError instances as-is
       if (error instanceof PlanValidationError) {
@@ -102,9 +107,9 @@ New context: ${contextUpdate.history
       .join('\n')}
 
 Goals:
-${existingPlan.getCurrentGoals().join('\n')}
+${existingPlan.getCurrentGoals()?.join('\n')}
 Techniques:
-${existingPlan.getRecommendedTechniques().join('\n')}
+${existingPlan.getRecommendedTechniques()?.join('\n')}
 
 return format: {
   goals: [],
@@ -149,14 +154,14 @@ return format: {
     const errors: string[] = [];
 
     // Check goal continuity
-    const removedGoals = previousContent.goals.filter(
+    const removedGoals = previousContent.goals?.filter(
       (g) =>
-        !newContent.goals.includes(g) &&
+        !newContent.goals?.includes(g) &&
         !(newContent.metrics?.completedGoals?.includes(g) || false),
     );
 
-    if (removedGoals.length > 0) {
-      errors.push(`Removed goals without completion: ${removedGoals.join(', ')}`);
+    if (removedGoals?.length && removedGoals?.length > 0) {
+      errors.push(`Removed goals without completion: ${removedGoals?.join(', ')}`);
     }
 
     // Only validate risk factors if they exist in the previous content

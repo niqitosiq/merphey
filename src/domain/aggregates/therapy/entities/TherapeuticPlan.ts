@@ -1,6 +1,5 @@
 import { TherapeuticPlan as PrismaTherapeuticPlan } from '@prisma/client';
 import { PlanVersion, PlanContent } from './PlanVersion';
-import { Conversation } from '../../conversation/entities/Conversation';
 
 /**
  * Domain entity representing a therapeutic plan for a user
@@ -16,7 +15,7 @@ export class TherapeuticPlan
 
     public currentVersion: PlanVersion | null,
     public currentVersionId: string | null,
-    // public conversations: Conversation[],
+
     public readonly createdAt: Date,
     public readonly updatedAt: Date,
   ) {}
@@ -36,17 +35,13 @@ export class TherapeuticPlan
       new Date(),
     );
 
-    this.versions.push(version);
-    this.currentVersion = version;
-    this.currentVersionId = version.id;
-
     return version;
   }
 
   /**
    * Gets the current active goals from the current version
    */
-  getCurrentGoals(): string[] {
+  getCurrentGoals() {
     if (!this.currentVersion) {
       return [];
     }
@@ -56,7 +51,7 @@ export class TherapeuticPlan
   /**
    * Gets recommended techniques from the current version
    */
-  getRecommendedTechniques(): string[] {
+  getRecommendedTechniques() {
     if (!this.currentVersion) {
       return [];
     }

@@ -1,5 +1,6 @@
-import { LlmPort } from '../../../domain/ports/llm.port';
 import { LlmServiceError } from '../../../shared/errors/application-errors';
+import { LlmPort } from '../../../domain/ports/llm.port';
+// LlmServiceError
 
 /**
  * OpenRouter API adapter implementation
@@ -77,14 +78,26 @@ export class LLMAdapter implements LlmPort {
           },
         ],
         temperature: options?.temperature || 0.7,
-        max_tokens: options?.maxTokens || 1000,
+        max_tokens: options?.maxTokens || 2000,
+        response_format: { type: 'json_object' },
       });
 
       if (!response.choices?.[0]?.message?.content) {
         throw new LlmServiceError('NO_COMPLETION', 'No completion generated');
       }
 
-      return response.choices[0].message.content;
+      const content = response.choices[0].message.content
+        .replace(/```json\n/, '')
+        .replace(/```/, '')
+        .trim()
+        //remove all before first {
+        // and all after last }
+        .replace(/.*?({)/, '{')
+        .replace(/(})[^}]*$/, '}');
+
+      console.log(content, 'content');
+
+      return content;
     } catch (error: unknown) {
       if (error instanceof LlmServiceError) {
         throw error;

@@ -1,7 +1,8 @@
-import { ConversationContext, Message } from '../aggregates/conversation/entities/types';
+import { ConversationContext } from '../aggregates/conversation/entities/types';
 import { RiskAssessment } from '../aggregates/conversation/entities/RiskAssessment';
 import { TherapeuticPlan } from '../aggregates/therapy/entities/TherapeuticPlan';
 import { ConversationState } from '../shared/enums';
+import { Message } from '../aggregates/conversation/entities/Message';
 
 /**
  * Interface for conversation storage operations

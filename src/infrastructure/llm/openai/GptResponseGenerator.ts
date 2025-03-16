@@ -27,7 +27,7 @@ export class GptResponseGenerator {
       // Generate response with specific parameters for therapeutic context
       const completion = await this.openai.generateCompletion(prompt, {
         temperature: 0.7,
-        maxTokens: 800,
+        maxTokens: 2000,
         presencePenalty: 0.6, // Encourage diverse responses
         frequencyPenalty: 0.2, // Reduce repetition
       });

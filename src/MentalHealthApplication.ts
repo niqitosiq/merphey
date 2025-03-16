@@ -2,7 +2,7 @@ import { ConversationService } from './application/services/SessionOrchestrator'
 import { MessageValidator } from './shared/utils/safety-filter';
 import { MessageFactory } from './domain/aggregates/conversation/entities/MessageFactory';
 import { RiskAssessor } from './domain/services/risk/RiskAssessmentService';
-import { EmergencyService } from './application/use-cases/message-processing/HandleEmergencyUseCase';
+
 import { ContextAnalyzer } from './domain/services/analysis/CognitiveAnalysisService';
 import { StateTransitionService } from './domain/services/state/StateTransitionService';
 import { GptResponseGenerator } from './infrastructure/llm/openai/GptResponseGenerator';
@@ -28,7 +28,6 @@ export class MentalHealthApplication {
     private messageValidator: MessageValidator,
     private messageFactory: MessageFactory,
     private riskAssessor: RiskAssessor,
-    private emergencyService: EmergencyService,
     private contextAnalyzer: ContextAnalyzer,
     private stateManager: StateTransitionService,
     private responseGenerator: GptResponseGenerator,
@@ -144,9 +143,11 @@ export class MentalHealthApplication {
     // Phase 5: Plan evolution
     // Evaluates if the therapeutic plan needs revision based on new insights
     // May create a new version of the plan with adjusted techniques or goals
-    let planUpdate = context.therapeuticPlan
-      ? await this.planService.revisePlan(context.therapeuticPlan, context)
-      : await this.planService.createInitialPlan(context.userId);
+    let updatedVersion = await this.planService.revisePlan(
+      context.therapeuticPlan,
+      context,
+      analysis,
+    );
 
     // Phase 6: Session progression
     // Calculates metrics about the session's therapeutic progress
@@ -161,7 +162,7 @@ export class MentalHealthApplication {
       riskAssessment,
       stateTransition,
       therapeuticResponse,
-      planUpdate,
+      updatedVersion,
       sessionProgress,
     };
     // This contains all components needed to update the system state and generate a response
@@ -179,7 +180,7 @@ export class MentalHealthApplication {
       if (!existingContext) {
         await this.conversationService.initializeConversationContext(userId);
       }
-    } catch (error) {
+    } catch (error: any) {
       this.errorHandler.handleProcessingError(error, userId);
     }
   }
@@ -189,7 +190,7 @@ export class MentalHealthApplication {
    * @param userId - The user identifier
    * @returns Promise<UserInfo> - User session information
    */
-  async getUserInfo(userId: string): Promise<UserInfo> {
+  async getUserInfo(userId: string) {
     try {
       const context = await this.conversationService.getConversationContext(userId);
       if (!context) {
@@ -214,19 +215,10 @@ export class MentalHealthApplication {
           messageCount: stats.totalMessages,
           sessionDuration: stats.duration,
         },
-        plan: plan
-          ? {
-              focusArea: plan.focusArea,
-              version: plan.version,
-            }
-          : null,
-        progress: progress
-          ? {
-              insights: progress.recentInsights,
-            }
-          : null,
+        plan: plan,
+        progress: progress,
       };
-    } catch (error) {
+    } catch (error: any) {
       this.errorHandler.handleProcessingError(error, userId);
       return null;
     }
@@ -240,7 +232,7 @@ export class MentalHealthApplication {
   async resetConversationState(userId: string): Promise<void> {
     try {
       await this.conversationService.resetConversationState(userId);
-    } catch (error) {
+    } catch (error: any) {
       this.errorHandler.handleProcessingError(error, userId);
     }
   }

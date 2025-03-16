@@ -6,6 +6,7 @@ import {
 import { TherapeuticPlan } from '../../../domain/aggregates/therapy/entities/TherapeuticPlan';
 import { PlanContent, PlanVersion } from '../../../domain/aggregates/therapy/entities/PlanVersion';
 import { ApplicationError } from '../../../shared/errors/application-errors';
+import { InputJsonValue, JsonValue } from '@prisma/client/runtime/library';
 
 export class TherapeuticPlanRepository {
   private prisma: PrismaClient;
@@ -109,8 +110,8 @@ export class TherapeuticPlanRepository {
    */
   async createPlanVersion(
     planId: string,
-    previousVersionId: string,
-    content: Record<string, any>,
+    previousVersionId: string | null,
+    content: InputJsonValue,
     validationScore: number,
   ): Promise<string> {
     try {
@@ -132,6 +133,7 @@ export class TherapeuticPlanRepository {
 
       const versionNumber = latestVersion ? latestVersion.version + 1 : 1;
 
+      console.log('data', versionNumber, planId, previousVersionId, content, validationScore);
       // Create the new version
       const newVersion = await this.prisma.planVersion.create({
         data: {
@@ -153,11 +155,13 @@ export class TherapeuticPlanRepository {
       });
 
       return newVersion.id;
-    } catch (error) {
+    } catch (error: any) {
+      console.log(error);
+
       if (error instanceof ApplicationError) {
         throw error;
       }
-      throw new ApplicationError('Failed to create plan version', 'VERSION_CREATION_ERROR', 'HIGH');
+      throw new ApplicationError('Failed to create plan version', error.message, 'HIGH');
     }
   }
 
@@ -268,13 +272,13 @@ export class TherapeuticPlanRepository {
     },
   ): TherapeuticPlan {
     const versions = prismaPlan.versions.map((version) => this.mapVersionToDomainModel(version));
-
+    console.log('prismaPlan.currentVersion', prismaPlan.currentVersion);
     return new TherapeuticPlan(
       prismaPlan.id,
       prismaPlan.userId,
       versions,
       prismaPlan.currentVersion ? this.mapVersionToDomainModel(prismaPlan.currentVersion) : null,
-      prismaPlan.currentVersionId,
+      prismaPlan.currentVersion?.id || null,
       prismaPlan.createdAt,
       prismaPlan.updatedAt,
     );

@@ -125,16 +125,15 @@ For immediate crisis support, please contact emergency services in your area or 
       // Current plan information
       if (userInfo.plan) {
         response += '\n*Current therapeutic plan*:\n';
-        response += `- Focus area: ${userInfo.plan.focusArea}\n`;
-        response += `- Plan version: ${userInfo.plan.version}\n`;
+        response += `- Focus area: ${userInfo.plan.currentVersion?.content}\n`;
 
-        // Progress highlights
-        if (userInfo.progress && userInfo.progress.insights.length > 0) {
-          response += '\n*Progress highlights*:\n';
-          userInfo.progress.insights.slice(0, 3).forEach((insight) => {
-            response += `- ${insight}\n`;
-          });
-        }
+        // // Progress highlights
+        // if (userInfo.progress && userInfo.progress.insights.length > 0) {
+        //   response += '\n*Progress highlights*:\n';
+        //   userInfo.progress.insights.slice(0, 3).forEach((insight) => {
+        //     response += `- ${insight}\n`;
+        //   });
+        // }
       }
 
       response += '\nContinue our conversation anytime by simply typing a message.';

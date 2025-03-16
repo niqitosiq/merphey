@@ -1,5 +1,4 @@
 import { SessionResponse } from '../../domain/aggregates/conversation/entities/types';
-import { NotificationService } from '../../infrastructure/messaging/NotificationService';
 import { RiskLevel } from '../../domain/shared/enums';
 
 /**
@@ -29,14 +28,6 @@ export class ApplicationError extends Error {
   toSessionResponse(): SessionResponse {
     return {
       message: 'I apologize, but I encountered an issue. Please try again in a moment.',
-      metadata: {
-        state: 'ERROR',
-        riskLevel: RiskLevel.LOW,
-        error: {
-          code: this.code,
-          message: this.message,
-        },
-      },
     };
   }
 }
@@ -92,8 +83,6 @@ export class PlanOperationError extends ApplicationError {
  * Error handler service for the application
  */
 export class ErrorHandler {
-  constructor(private notificationService: NotificationService) {}
-
   /**
    * Handles errors occurring during message processing
    * @param error - The error that occurred
@@ -120,16 +109,16 @@ export class ErrorHandler {
 
     // Notify developers of critical errors
     if (error instanceof ApplicationError && error.severity === 'CRITICAL') {
-      await this.notificationService.notifyDevelopers({
-        type: 'error',
-        title: 'Critical Error',
-        message: error.message,
-        metadata: {
-          userId,
-          errorCode: error.code,
-          ...error.metadata,
-        },
-      });
+      // await this.notificationService.notifyDevelopers({
+      //   type: 'error',
+      //   title: 'Critical Error',
+      //   message: error.message,
+      //   metadata: {
+      //     userId,
+      //     errorCode: error.code,
+      //     ...error.metadata,
+      //   },
+      // });
     }
 
     // Generate appropriate fallback response
@@ -140,14 +129,6 @@ export class ErrorHandler {
     // Generic error response
     return {
       message: 'I apologize, but something went wrong. Please try again later.',
-      metadata: {
-        state: 'ERROR',
-        riskLevel: RiskLevel.LOW,
-        error: {
-          code: 'UNKNOWN_ERROR',
-          message: 'An unexpected error occurred',
-        },
-      },
     };
   }
 
@@ -164,13 +145,15 @@ export class ErrorHandler {
     return {
       message: 'I encountered an unexpected issue. Please try again.',
       metadata: {
-        state: 'ERROR',
+        state: 'SESSION_CLOSING',
         riskLevel: RiskLevel.LOW,
-        error: {
-          code: 'UNKNOWN_ERROR',
-          message: 'An unexpected error occurred',
-        },
       },
     };
+  }
+}
+
+export class LlmServiceError extends ApplicationError {
+  constructor(message: string, code: string) {
+    super(message, code, 'CRITICAL');
   }
 }

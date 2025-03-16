@@ -51,7 +51,7 @@ export class EmergencyResponseGenerator {
       const prompt = this.buildEmergencyPrompt(messageContent, riskFactors, riskLevel);
       const completion = await this.openai.generateCompletion(prompt, {
         temperature: 0.3, // Lower temperature for more consistent crisis responses
-        maxTokens: 300,
+        maxTokens: 1000,
         presencePenalty: 0.0, // Stick to proven crisis intervention language
         frequencyPenalty: 0.0,
       });
