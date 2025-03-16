@@ -1,8 +1,8 @@
-import { UserMessage } from '../../aggregates/conversation/entities/types';
 import { TherapeuticPlan } from '../../aggregates/therapy/entities/TherapeuticPlan';
 import { LLMAdapter } from '../../../infrastructure/llm/openai/LLMAdapter';
+import { Message } from 'src/domain/aggregates/conversation/entities/Message';
 
-interface AnalysisResult {
+export interface AnalysisResult {
   emotionalThemes: {
     primary: string;
     secondary: string[];
@@ -41,9 +41,9 @@ export class ContextAnalyzer {
    * @returns Analysis - Cognitive and emotional insights from the message
    */
   async analyzeMessage(
-    message: UserMessage,
-    plan: TherapeuticPlan,
-    history: UserMessage[],
+    message: Message,
+    plan: TherapeuticPlan | null,
+    history: Message[],
   ): Promise<AnalysisResult> {
     const prompt = this.constructAnalysisPrompt(message, plan, history);
     const response = await this.llmService.generateCompletion(prompt);
@@ -56,15 +56,15 @@ export class ContextAnalyzer {
   }
 
   private constructAnalysisPrompt(
-    message: UserMessage,
-    plan: TherapeuticPlan,
-    history: UserMessage[],
+    message: Message,
+    plan: TherapeuticPlan | null,
+    history: Message[],
   ): string {
     const recentHistory = history
       .slice(-5)
       .map((m) => m.content)
       .join('\n');
-    const planContent = plan.currentVersion?.getContent();
+    const planContent = plan?.currentVersion?.getContent();
     const goals = planContent ? planContent.goals.join(', ') : 'No current goals';
 
     return `Analyze this therapeutic conversation message with context:

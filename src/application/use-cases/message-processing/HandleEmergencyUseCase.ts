@@ -1,6 +1,6 @@
 import {
   ConversationContext,
-  UserMessage,
+  Message,
   ProcessingResult,
 } from '../../../domain/aggregates/conversation/entities/types';
 import { RiskAssessment } from '../../../domain/aggregates/conversation/entities/RiskAssessment';
@@ -26,7 +26,7 @@ export class EmergencyService {
    */
   async handleCriticalSituation(
     context: ConversationContext,
-    message: UserMessage,
+    message: Message,
     riskAssessment: RiskAssessment,
   ): Promise<ProcessingResult> {
     // Will notify human moderators about critical situation

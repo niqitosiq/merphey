@@ -13,9 +13,10 @@ export class TherapeuticPlan
     public readonly id: string,
     public readonly userId: string,
     public versions: PlanVersion[],
+
     public currentVersion: PlanVersion | null,
     public currentVersionId: string | null,
-    public conversations: Conversation[],
+    // public conversations: Conversation[],
     public readonly createdAt: Date,
     public readonly updatedAt: Date,
   ) {}
@@ -122,10 +123,10 @@ export class TherapeuticPlan
     this.currentVersionId = version.id;
   }
 
-  /**
-   * Gets all conversations using this plan
-   */
-  getConversations(): Conversation[] {
-    return this.conversations;
-  }
+  // /**
+  //  * Gets all conversations using this plan
+  //  */
+  // getConversations(): Conversation[] {
+  //   return this.conversations;
+  // }
 }

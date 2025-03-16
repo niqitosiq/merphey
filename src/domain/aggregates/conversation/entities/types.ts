@@ -1,15 +1,7 @@
-import { Message as PrismaMessage, ConversationState, RiskLevel } from '@prisma/client';
+import { ConversationState, PlanVersion, RiskLevel } from '@prisma/client';
 import { TherapeuticPlan } from '../../therapy/entities/TherapeuticPlan';
 import { RiskAssessment } from './RiskAssessment';
-
-/**
- * Represents a user message in the system
- * Contains the content, metadata, and contextual information
- */
-export type UserMessage = Omit<PrismaMessage, 'metadata'> & {
-  metadata?: Record<string, any>;
-  context?: ConversationState;
-};
+import { Message } from './Message';
 
 /**
  * Represents the complete context of a conversation
@@ -19,7 +11,7 @@ export type ConversationContext = {
   conversationId: string;
   userId: string;
   currentState: ConversationState;
-  history: UserMessage[];
+  history: Message[];
   riskHistory: RiskAssessment[];
   therapeuticPlan?: TherapeuticPlan;
 };
@@ -86,7 +78,7 @@ export interface ProcessingResult {
   /**
    * Any updates to the therapeutic plan
    */
-  planUpdate: PlanRevision;
+  planUpdate: TherapeuticPlan;
 
   /**
    * Session progress metrics
@@ -126,36 +118,16 @@ export interface TherapeuticResponse {
   /**
    * Analysis insights derived during response generation
    */
-  insights: any;
+  insights: {
+    positiveProgress: string;
+    techniqueAdoption: string;
+    challenges: string[];
+  };
 
   /**
    * Therapeutic techniques suggested in the response
    */
   suggestedTechniques?: string[];
-}
-
-/**
- * Plan revision information
- */
-export interface PlanRevision {
-  /**
-   * Whether the plan needed revision
-   */
-  revisionRequired: boolean;
-
-  /**
-   * ID of the newly created version, if revision occurred
-   */
-  newVersionId?: string;
-
-  /**
-   * Details of changes made in the revision
-   */
-  changes?: {
-    addedTechniques: string[];
-    removedTechniques: string[];
-    adjustedGoals: Record<string, any>;
-  };
 }
 
 /**
@@ -182,3 +154,19 @@ export interface SessionProgress {
    */
   challenges: string[];
 }
+
+/**
+ * Represents a user message in the system
+ * Contains the content, metadata, and contextual information
+ */
+export type UserMessage = Omit<Message, 'metadata'> & {
+  metadata?: Metadata;
+  context?: ConversationState;
+};
+
+export type Metadata = Record<string, any> & {
+  breakthrough?: string;
+  challenge?: string;
+  sessionProgress?: SessionProgress;
+  timestamp?: number;
+};

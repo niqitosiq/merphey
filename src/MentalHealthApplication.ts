@@ -1,22 +1,22 @@
 import { ConversationService } from './application/services/SessionOrchestrator';
 import { MessageValidator } from './shared/utils/safety-filter';
-import { MessageFactory } from './domain/aggregates/conversation/entities/Message';
+import { MessageFactory } from './domain/aggregates/conversation/entities/MessageFactory';
 import { RiskAssessor } from './domain/services/risk/RiskAssessmentService';
 import { EmergencyService } from './application/use-cases/message-processing/HandleEmergencyUseCase';
 import { ContextAnalyzer } from './domain/services/analysis/CognitiveAnalysisService';
-import { StateManager } from './domain/services/state/StateTransitionService';
-import { ResponseGenerator } from './infrastructure/llm/openai/GptResponseGenerator';
-import { PlanService } from './domain/aggregates/therapy/services/PlanEvolutionService';
-import { ProgressTracker } from './application/services/ResponseCoordinator';
-import { ResponseComposer } from './application/services/ResponseCoordinator';
+import { StateTransitionService } from './domain/services/state/StateTransitionService';
+import { GptResponseGenerator } from './infrastructure/llm/openai/GptResponseGenerator';
+import { PlanEvolutionService } from './domain/aggregates/therapy/services/PlanEvolutionService';
+import { ProgressTracker } from './application/services/ProgressTracker';
+import { ResponseComposer } from './application/services/ProgressTracker';
 import { ErrorHandler } from './shared/errors/application-errors';
 
 import {
   ConversationContext,
-  UserMessage,
   SessionResponse,
   ProcessingResult,
 } from './domain/aggregates/conversation/entities/types';
+import { Message } from './domain/aggregates/conversation/entities/Message';
 
 /**
  * Main application class that orchestrates the mental health chatbot workflow
@@ -30,9 +30,9 @@ export class MentalHealthApplication {
     private riskAssessor: RiskAssessor,
     private emergencyService: EmergencyService,
     private contextAnalyzer: ContextAnalyzer,
-    private stateManager: StateManager,
-    private responseGenerator: ResponseGenerator,
-    private planService: PlanService,
+    private stateManager: StateTransitionService,
+    private responseGenerator: GptResponseGenerator,
+    private planService: PlanEvolutionService,
     private progressTracker: ProgressTracker,
     private responseComposer: ResponseComposer,
     private errorHandler: ErrorHandler,
@@ -44,7 +44,7 @@ export class MentalHealthApplication {
    * @param message - The raw user message text
    * @returns SessionResponse - Contains therapeutic response and updated context
    */
-  async handleUserMessage(userId: string, message: string): Promise<SessionResponse> {
+  async handleMessage(userId: string, message: string): Promise<SessionResponse> {
     try {
       // 1. Retrieve conversation context
       const context = await this.conversationService.getConversationContext(userId);
@@ -56,23 +56,24 @@ export class MentalHealthApplication {
 
       // 3. Create message entity
       // Creates a domain entity from the raw message text
-      const userMessage = this.messageFactory.createMessage({
+      const Message = this.messageFactory.createMessage({
         content: sanitizedMessage,
         role: 'user',
-        context: context.currentState,
+        conversationId: context.conversationId,
+        metadata: {},
       });
       // Includes metadata about the context and conversation state
 
       // 4. Core processing pipeline
       // This processes the message through multiple analysis stages
-      const processingResult = await this.processMessagePipeline(context, userMessage);
+      const processingResult = await this.processMessagePipeline(context, Message);
       // See processMessagePipeline method for details
 
       // 5. Update conversation state
       // Persists the new message and any state changes to the database
       const updatedContext = await this.conversationService.persistConversationFlow(
         context,
-        userMessage,
+        Message,
         processingResult,
       );
       // Updates the conversation context with new risk assessments and insights
@@ -81,7 +82,7 @@ export class MentalHealthApplication {
       // Creates the final response package to be sent back to the user
       return this.responseComposer.createResponsePackage(processingResult, updatedContext);
       // Includes therapeutic message, metadata, and progress metrics
-    } catch (error) {
+    } catch (error: any) {
       // Handle errors and generate appropriate fallback responses
       return this.errorHandler.handleProcessingError(error, userId);
       // Will log errors and possibly alert administrators for critical failures
@@ -98,7 +99,7 @@ export class MentalHealthApplication {
    */
   private async processMessagePipeline(
     context: ConversationContext,
-    message: UserMessage,
+    message: Message,
   ): Promise<ProcessingResult> {
     // Phase 1: Immediate risk analysis
     // Analyzes the message for potential risk factors and assigns a risk level
@@ -119,17 +120,14 @@ export class MentalHealthApplication {
     // Analyzes the message in the context of the user's history and therapeutic plan
     const analysis = await this.contextAnalyzer.analyzeMessage(
       message,
-      context.therapeuticPlan,
+      context.therapeuticPlan || null,
       context.history,
     );
     // Identifies themes, emotional states, and cognitive patterns
 
     // Phase 3: State management
     // Determines if the conversation state should transition based on the analysis
-    const stateTransition = await this.stateManager.determineStateTransition(
-      context.currentState,
-      analysis.insights,
-    );
+    const stateTransition = await this.stateManager.determineTransition(context);
     // Uses state machine rules to manage the therapeutic flow
 
     // Phase 4: Therapeutic response generation
@@ -137,7 +135,6 @@ export class MentalHealthApplication {
     const therapeuticResponse = await this.responseGenerator.generateTherapeuticResponse(
       context.currentState,
       analysis,
-      stateTransition,
     );
     // - Current conversation state
     // - Risk assessment
@@ -146,11 +143,10 @@ export class MentalHealthApplication {
 
     // Phase 5: Plan evolution
     // Evaluates if the therapeutic plan needs revision based on new insights
-    const planUpdate = await this.planService.evaluatePlanRevision(
-      context.therapeuticPlan,
-      therapeuticResponse.insights,
-    );
     // May create a new version of the plan with adjusted techniques or goals
+    let planUpdate = context.therapeuticPlan
+      ? await this.planService.createInitialPlan(context.userId)
+      : await this.planService.revisePlan(context.therapeuticPlan!, context);
 
     // Phase 6: Session progression
     // Calculates metrics about the session's therapeutic progress

@@ -1,4 +1,4 @@
-import { ConversationContext, UserMessage } from '../aggregates/conversation/entities/types';
+import { ConversationContext, Message } from '../aggregates/conversation/entities/types';
 import { RiskAssessment } from '../aggregates/conversation/entities/RiskAssessment';
 import { TherapeuticPlan } from '../aggregates/therapy/entities/TherapeuticPlan';
 import { ConversationState } from '../shared/enums';
@@ -29,7 +29,7 @@ export interface ConversationRepositoryPort {
    * @param message - The message to add
    * @returns string - ID of the created message
    */
-  addMessage(conversationId: string, message: UserMessage): Promise<string>;
+  addMessage(conversationId: string, message: Message): Promise<string>;
 
   /**
    * Updates conversation state

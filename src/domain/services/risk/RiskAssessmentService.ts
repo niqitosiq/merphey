@@ -118,10 +118,21 @@ export class RiskAssessor {
     // Calculate weighted risk score
     const baseScore = this.calculateBaseRiskScore(sentiment, crisis, trend);
 
-    // Determine risk level based on score thresholds
+    // Consider trend adjustments
+    let adjustedScore = baseScore;
+    if (trend.direction === 'increasing' && trend.volatility > 0.3) {
+      adjustedScore = Math.min(1, baseScore * (1 + trend.volatility));
+    }
+
+    // Factor in crisis severity for borderline cases
+    if (crisis.severity > 0.7 && adjustedScore > 0.5) {
+      adjustedScore = Math.min(1, adjustedScore + crisis.severity * 0.2);
+    }
+
+    // Determine risk level based on adjusted score
     return {
-      level: this.mapScoreToRiskLevel(baseScore),
-      score: baseScore,
+      level: this.mapScoreToRiskLevel(adjustedScore),
+      score: adjustedScore,
     };
   }
 

@@ -1,7 +1,18 @@
-import { PlanVersion as PrismaPlanVersion, Prisma } from '@prisma/client';
+import { PlanVersion as PrismaPlanVersion } from '@prisma/client';
 import { TherapeuticPlan } from './TherapeuticPlan';
 
-export interface PlanContent extends Record<string, any> {
+// export interface PlanContent extends Record<string, any> {
+//   goals: string[];
+//   techniques: string[];
+//   approach: string;
+//   metrics?: {
+//     completedGoals?: string[];
+//     [key: string]: any;
+//   };
+//   focus?: string;
+// }
+
+export interface PlanContent {
   goals: string[];
   techniques: string[];
   approach: string;
@@ -10,6 +21,7 @@ export interface PlanContent extends Record<string, any> {
     [key: string]: any;
   };
   focus?: string;
+  riskFactors?: string[];
 }
 
 /**
@@ -27,7 +39,7 @@ export class PlanVersion
     public readonly id: string,
     public readonly planId: string,
     public readonly previousVersionId: string | null,
-    public readonly content: Prisma.JsonValue,
+    public readonly content: PrismaPlanVersion['content'],
     public readonly validationScore: number | null,
     public readonly version: number,
     public readonly createdAt: Date,
@@ -68,7 +80,7 @@ export class PlanVersion
    * Gets the content of this version
    */
   getContent(): PlanContent {
-    return this.content as PlanContent;
+    return this.content as unknown as PlanContent;
   }
 
   /**

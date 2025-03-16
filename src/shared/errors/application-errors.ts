@@ -1,10 +1,13 @@
 import { SessionResponse } from '../../domain/aggregates/conversation/entities/types';
 import { NotificationService } from '../../infrastructure/messaging/NotificationService';
+import { RiskLevel } from '../../domain/shared/enums';
 
 /**
  * Custom error classes for application-level errors
  * Provides structured error handling for the application layer
  */
+
+type ErrorMetadata = Record<string, any>;
 
 /**
  * Base application error class
@@ -14,9 +17,27 @@ export class ApplicationError extends Error {
     message: string,
     public readonly code: string,
     public readonly severity: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL',
+    public readonly metadata?: ErrorMetadata,
   ) {
     super(message);
     this.name = 'ApplicationError';
+  }
+
+  /**
+   * Creates a user-friendly error response
+   */
+  toSessionResponse(): SessionResponse {
+    return {
+      message: 'I apologize, but I encountered an issue. Please try again in a moment.',
+      metadata: {
+        state: 'ERROR',
+        riskLevel: RiskLevel.LOW,
+        error: {
+          code: this.code,
+          message: this.message,
+        },
+      },
+    };
   }
 }
 
@@ -27,28 +48,48 @@ export class MessageProcessingError extends ApplicationError {
   constructor(
     message: string,
     public readonly originalError?: Error,
+    metadata?: ErrorMetadata,
   ) {
-    super(message, 'MESSAGE_PROCESSING_ERROR', 'MEDIUM');
-    this.name = 'MessageProcessingError';
+    super(message, 'MESSAGE_PROCESSING_ERROR', 'MEDIUM', metadata);
   }
 }
 
 /**
- * Error for LLM service failures
+ * Error for conversation context retrieval failures
  */
-export class LlmServiceError extends ApplicationError {
+export class ContextRetrievalError extends ApplicationError {
   constructor(
     message: string,
-    public readonly serviceProvider: string,
+    public readonly userId: string,
+    public readonly originalError?: Error,
   ) {
-    super(message, 'LLM_SERVICE_ERROR', 'HIGH');
-    this.name = 'LlmServiceError';
+    super(message, 'CONTEXT_RETRIEVAL_ERROR', 'HIGH', {
+      userId,
+      originalError: originalError?.message,
+    });
   }
 }
 
 /**
- * Error handler service for application-wide error management
- * Provides consistent error handling and fallback responses
+ * Error for therapeutic plan operations
+ */
+export class PlanOperationError extends ApplicationError {
+  constructor(
+    message: string,
+    code: string,
+    severity: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL',
+    public readonly planId?: string,
+    public readonly originalError?: Error,
+  ) {
+    super(message, code, severity, {
+      planId,
+      originalError: originalError?.message,
+    });
+  }
+}
+
+/**
+ * Error handler service for the application
  */
 export class ErrorHandler {
   constructor(private notificationService: NotificationService) {}
@@ -59,24 +100,77 @@ export class ErrorHandler {
    * @param userId - ID of the user whose message generated the error
    * @returns SessionResponse - Fallback response for the user
    */
-  handleProcessingError(error: Error, userId: string): SessionResponse {
-    // Will log error details for monitoring
-    // Will classify error type and severity
-    // Will notify developers of critical errors
-    // Will generate appropriate fallback response
-    // Will preserve conversation state when possible
-    // Will ensure error doesn't impact user safety
+  async handleProcessingError(error: Error, userId: string): Promise<SessionResponse> {
+    // Log error for monitoring
+    console.error('Processing error:', {
+      userId,
+      error:
+        error instanceof ApplicationError
+          ? {
+              code: error.code,
+              message: error.message,
+              severity: error.severity,
+              metadata: error.metadata,
+            }
+          : {
+              message: error.message,
+              stack: error.stack,
+            },
+    });
+
+    // Notify developers of critical errors
+    if (error instanceof ApplicationError && error.severity === 'CRITICAL') {
+      await this.notificationService.notifyDevelopers({
+        type: 'error',
+        title: 'Critical Error',
+        message: error.message,
+        metadata: {
+          userId,
+          errorCode: error.code,
+          ...error.metadata,
+        },
+      });
+    }
+
+    // Generate appropriate fallback response
+    if (error instanceof ApplicationError) {
+      return error.toSessionResponse();
+    }
+
+    // Generic error response
+    return {
+      message: 'I apologize, but something went wrong. Please try again later.',
+      metadata: {
+        state: 'ERROR',
+        riskLevel: RiskLevel.LOW,
+        error: {
+          code: 'UNKNOWN_ERROR',
+          message: 'An unexpected error occurred',
+        },
+      },
+    };
   }
 
   /**
-   * Logs an error to monitoring system
-   * @param error - The error to log
-   * @param context - Additional context information
+   * Creates an appropriate error response for the user
+   * @param error - The error to handle
+   * @returns SessionResponse - User-friendly error response
    */
-  private logError(error: Error, context: Record<string, any>): void {
-    // Will format error for logging system
-    // Will include stack trace and context
-    // Will add timestamp and error classification
-    // Will handle different logging targets based on severity
+  createErrorResponse(error: Error): SessionResponse {
+    if (error instanceof ApplicationError) {
+      return error.toSessionResponse();
+    }
+
+    return {
+      message: 'I encountered an unexpected issue. Please try again.',
+      metadata: {
+        state: 'ERROR',
+        riskLevel: RiskLevel.LOW,
+        error: {
+          code: 'UNKNOWN_ERROR',
+          message: 'An unexpected error occurred',
+        },
+      },
+    };
   }
 }
