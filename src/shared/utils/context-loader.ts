@@ -1,5 +1,8 @@
-import { ConversationState } from '@prisma/client';
-import { ConversationContext, Message } from '../../domain/aggregates/conversation/entities/types';
+import { ConversationState, Message } from '@prisma/client';
+import {
+  ConversationContext,
+  UserMessage,
+} from '../../domain/aggregates/conversation/entities/types';
 import { TherapeuticPlan } from '../../domain/aggregates/therapy/entities/TherapeuticPlan';
 import { RiskAssessment } from '../../domain/aggregates/conversation/entities/RiskAssessment';
 
@@ -56,7 +59,7 @@ export class ContextLoader {
     conversationId: string,
     userId: string,
     currentState: ConversationState,
-    messages: Message[],
+    messages: UserMessage[],
     therapeuticPlan: TherapeuticPlan | undefined,
     riskHistory: RiskAssessment[],
   ): ConversationContext {

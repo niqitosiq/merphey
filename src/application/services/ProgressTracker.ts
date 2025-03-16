@@ -1,10 +1,10 @@
-import { Message } from 'src/domain/aggregates/conversation/entities/Message';
 import {
   ConversationContext,
   ProcessingResult,
   SessionResponse,
   TherapeuticResponse,
   SessionProgress,
+  UserMessage,
 } from '../../domain/aggregates/conversation/entities/types';
 
 /**
@@ -24,7 +24,7 @@ export class ProgressTracker {
    * @param response - Current therapeutic response
    * @returns SessionProgress - Progress metrics for the session
    */
-  calculateSessionMetrics(history: Message[], response: TherapeuticResponse): SessionProgress {
+  calculateSessionMetrics(history: UserMessage[], response: TherapeuticResponse): SessionProgress {
     // Calculate engagement based on user message patterns
     const engagementScore = this.calculateEngagementScore(history);
     const engagementLevel = this.determineEngagementLevel(engagementScore);
@@ -49,7 +49,7 @@ export class ProgressTracker {
   /**
    * Calculates user engagement score based on message patterns
    */
-  private calculateEngagementScore(history: Message[]): number {
+  private calculateEngagementScore(history: UserMessage[]): number {
     if (!history.length) return 0;
 
     const Messages = history.filter((msg) => msg.role === 'user');
@@ -84,7 +84,7 @@ export class ProgressTracker {
   /**
    * Identifies breakthrough moments from conversation
    */
-  private identifyBreakthroughs(history: Message[], response: TherapeuticResponse): string[] {
+  private identifyBreakthroughs(history: UserMessage[], response: TherapeuticResponse): string[] {
     const breakthroughs: string[] = [];
 
     // Check response insights for breakthrough indicators
@@ -111,7 +111,7 @@ export class ProgressTracker {
   /**
    * Identifies ongoing challenges from conversation
    */
-  private identifyChallenges(history: Message[], response: TherapeuticResponse): string[] {
+  private identifyChallenges(history: UserMessage[], response: TherapeuticResponse): string[] {
     const challenges: string[] = [];
 
     // Extract challenges from response insights
@@ -133,7 +133,7 @@ export class ProgressTracker {
   /**
    * Calculates time-based engagement score
    */
-  private calculateTimeScore(messages: Message[]): number {
+  private calculateTimeScore(messages: UserMessage[]): number {
     if (messages.length < 2) return 0.5; // Neutral score for short conversations
 
     let timeScore = 0;
@@ -161,7 +161,7 @@ export class ProgressTracker {
   /**
    * Calculates score based on therapeutic technique adoption
    */
-  private calculateTechniqueAdoptionScore(messages: Message[]): number {
+  private calculateTechniqueAdoptionScore(messages: UserMessage[]): number {
     let techniqueScore = 0;
     let techniquesAttempted = 0;
 

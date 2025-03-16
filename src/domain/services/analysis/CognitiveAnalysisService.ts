@@ -1,6 +1,7 @@
 import { TherapeuticPlan } from '../../aggregates/therapy/entities/TherapeuticPlan';
 import { LLMAdapter } from '../../../infrastructure/llm/openai/LLMAdapter';
 import { Message } from 'src/domain/aggregates/conversation/entities/Message';
+import { UserMessage } from 'src/domain/aggregates/conversation/entities/types';
 
 export interface AnalysisResult {
   emotionalThemes: {
@@ -43,7 +44,7 @@ export class ContextAnalyzer {
   async analyzeMessage(
     message: Message,
     plan: TherapeuticPlan | null,
-    history: Message[],
+    history: UserMessage[],
   ): Promise<AnalysisResult> {
     const prompt = this.constructAnalysisPrompt(message, plan, history);
     const response = await this.llmService.generateCompletion(prompt);
@@ -58,7 +59,7 @@ export class ContextAnalyzer {
   private constructAnalysisPrompt(
     message: Message,
     plan: TherapeuticPlan | null,
-    history: Message[],
+    history: UserMessage[],
   ): string {
     const recentHistory = history
       .slice(-5)

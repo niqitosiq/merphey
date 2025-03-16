@@ -111,9 +111,9 @@ export class MentalHealthApplication {
 
     // Emergency handling
     // If critical risk is detected, bypass normal pipeline and trigger emergency protocols
-    if (riskAssessment.level === 'CRITICAL') {
-      return this.emergencyService.handleCriticalSituation(context, message, riskAssessment);
-    }
+    // if (riskAssessment.level === 'CRITICAL') {
+    //   return this.emergencyService.handleCriticalSituation(context, message, riskAssessment);
+    // }
     // This may involve notifying human moderators or providing crisis resources
 
     // Phase 2: Contextual analysis
@@ -145,8 +145,8 @@ export class MentalHealthApplication {
     // Evaluates if the therapeutic plan needs revision based on new insights
     // May create a new version of the plan with adjusted techniques or goals
     let planUpdate = context.therapeuticPlan
-      ? await this.planService.createInitialPlan(context.userId)
-      : await this.planService.revisePlan(context.therapeuticPlan!, context);
+      ? await this.planService.revisePlan(context.therapeuticPlan, context)
+      : await this.planService.createInitialPlan(context.userId);
 
     // Phase 6: Session progression
     // Calculates metrics about the session's therapeutic progress
@@ -165,5 +165,83 @@ export class MentalHealthApplication {
       sessionProgress,
     };
     // This contains all components needed to update the system state and generate a response
+  }
+
+  /**
+   * Starts a new therapy session for a user
+   * @param userId - The user identifier
+   * @returns Promise<void>
+   */
+  async startSession(userId: string): Promise<void> {
+    try {
+      // Create initial conversation context if it doesn't exist
+      const existingContext = await this.conversationService.getConversationContext(userId);
+      if (!existingContext) {
+        await this.conversationService.initializeConversationContext(userId);
+      }
+    } catch (error) {
+      this.errorHandler.handleProcessingError(error, userId);
+    }
+  }
+
+  /**
+   * Retrieves user session information including conversation state and progress
+   * @param userId - The user identifier
+   * @returns Promise<UserInfo> - User session information
+   */
+  async getUserInfo(userId: string): Promise<UserInfo> {
+    try {
+      const context = await this.conversationService.getConversationContext(userId);
+      if (!context) {
+        return null;
+      }
+
+      // Get session statistics
+      const stats = await this.progressTracker.getSessionStats(context);
+
+      // Get current therapeutic plan if exists
+      const plan = context.therapeuticPlan;
+
+      // Get progress insights if available
+      const progress = await this.progressTracker.getProgressInsights(context);
+
+      return {
+        conversation: {
+          state: context.currentState,
+          id: context.conversationId,
+        },
+        stats: {
+          messageCount: stats.totalMessages,
+          sessionDuration: stats.duration,
+        },
+        plan: plan
+          ? {
+              focusArea: plan.focusArea,
+              version: plan.version,
+            }
+          : null,
+        progress: progress
+          ? {
+              insights: progress.recentInsights,
+            }
+          : null,
+      };
+    } catch (error) {
+      this.errorHandler.handleProcessingError(error, userId);
+      return null;
+    }
+  }
+
+  /**
+   * Resets the current conversation state for a user
+   * @param userId - The user identifier
+   * @returns Promise<void>
+   */
+  async resetConversationState(userId: string): Promise<void> {
+    try {
+      await this.conversationService.resetConversationState(userId);
+    } catch (error) {
+      this.errorHandler.handleProcessingError(error, userId);
+    }
   }
 }

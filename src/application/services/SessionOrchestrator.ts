@@ -186,6 +186,7 @@ export class ConversationService {
               goals: [],
               techniques: processingResult.therapeuticResponse.suggestedTechniques || [],
               insights: processingResult.therapeuticResponse.insights || {},
+              approach: processingResult.planUpdate,
             },
           });
 

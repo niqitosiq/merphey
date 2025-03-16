@@ -11,7 +11,7 @@ export type ConversationContext = {
   conversationId: string;
   userId: string;
   currentState: ConversationState;
-  history: Message[];
+  history: UserMessage[];
   riskHistory: RiskAssessment[];
   therapeuticPlan?: TherapeuticPlan;
 };
