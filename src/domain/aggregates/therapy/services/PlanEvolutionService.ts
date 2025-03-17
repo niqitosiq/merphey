@@ -124,9 +124,7 @@ return format: {
    * Gets, parses and validates the basic structure of a plan from LLM
    */
   private async getValidatedPlanContent(prompt: string): Promise<PlanContent> {
-    const revisedContent = await this.llmGateway.generateCompletion(prompt, {
-      model: 'amazon/nova-micro-v1',
-    });
+    const revisedContent = await this.llmGateway.generateCompletion(prompt, {});
 
     try {
       const parsedContent = JSON.parse(revisedContent);

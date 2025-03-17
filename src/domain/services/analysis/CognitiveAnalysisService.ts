@@ -50,7 +50,7 @@ export class ContextAnalyzer {
   ): Promise<AnalysisResult> {
     const prompt = this.constructAnalysisPrompt(message, plan, history);
     const response = await this.llmService.generateCompletion(prompt, {
-      model: 'amazon/nova-micro-v1',
+      model: 'google/gemini-2.0-flash-exp:free',
     });
 
     try {
