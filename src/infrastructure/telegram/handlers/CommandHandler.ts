@@ -19,14 +19,13 @@ export class CommandHandler {
    * Handles a command message from a user
    * @param userId - The Telegram user ID
    * @param command - The command name (without /)
-   * @param args - Command arguments if any
    * @returns Promise<string> - Response message to send to the user
    */
-  async handleCommand(userId: string, command: string, args: string[] = []): Promise<string> {
+  async handleCommand(userId: string, command: string): Promise<string> {
     try {
       // Check if command is valid
       if (!this.availableCommands.includes(command)) {
-        return `Unknown command /${command}. Type /help for available commands.`;
+        return `Неизвестная команда /${command}. Напишите /help чтобы увидеть доступные команды.`;
       }
 
       console.log(`Processing command /${command} from user ${userId}`);
@@ -37,7 +36,7 @@ export class CommandHandler {
           return await this.handleStartCommand(userId);
 
         case 'help':
-          return await this.handleHelpCommand(userId);
+          return await this.handleHelpCommand();
 
         case 'info':
           return await this.handleInfoCommand(userId);
@@ -45,19 +44,12 @@ export class CommandHandler {
         case 'cancel':
           return await this.handleCancelCommand(userId);
 
-        // case 'feedback':
-        //   return await this.handleFeedbackCommand(userId, args);
-
-        // case 'resources':
-        //   return await this.handleResourcesCommand(userId);
-
         default:
-          // This shouldn't happen because we validated the command above
-          return `Sorry, the /${command} command is not implemented yet.`;
+          return `Извините, команда /${command} пока не реализована.`;
       }
     } catch (error) {
       console.error(`Error processing command /${command} from user ${userId}:`, error);
-      return `Sorry, I encountered an error while processing your /${command} command. Please try again later.`;
+      return `Извините, произошла ошибка при обработке команды /${command}. Пожалуйста, попробуйте позже.`;
     }
   }
 
@@ -70,31 +62,30 @@ export class CommandHandler {
     // Create user session if it doesn't exist
     await this.application.startSession(userId);
 
-    return `Welcome to PsychoBot! 🌿\n\n
-I'm here to support your mental health journey through therapeutic conversations. I can help with:\n
-- Daily check-ins and emotional support
-- Developing coping strategies
-- Providing therapeutic techniques
-- Offering resources when needed\n
-Simply start typing to begin our conversation. Your privacy and wellbeing are my priorities.\n
-Type /help anytime to see available commands.`;
+    return `Добро пожаловать в PsychoBot! 🌿\n\n
+Я здесь, чтобы поддержать ваше психическое здоровье через терапевтические беседы. Я могу помочь с:\n
+- Ежедневными проверками и эмоциональной поддержкой
+- Развитием стратегий совладания
+- Предоставлением терапевтических техник
+- Предложением ресурсов при необходимости\n
+Просто начните печатать, чтобы начать нашу беседу. Ваша конфиденциальность и благополучие - мои приоритеты.\n
+Напишите /help в любое время, чтобы увидеть доступные команды.`;
   }
 
   /**
    * Handles the /help command
-   * @param userId - The Telegram user ID
    * @returns Promise<string> - Help message
    */
-  private async handleHelpCommand(userId: string): Promise<string> {
-    return `*PsychoBot Help* 📚\n
-Available commands:
-- /start - Begin or restart a therapy session
-- /help - Show this help message
-- /info - View your therapy progress and status
-- /cancel - End the current conversation flow
-- /feedback - Submit feedback (e.g., /feedback Your message here)
-- /resources - Get mental health support resources\n
-For immediate crisis support, please contact emergency services in your area or text HOME to 741741 to reach Crisis Text Line.`;
+  private async handleHelpCommand(): Promise<string> {
+    return `*Помощь PsychoBot* 📚\n
+Доступные команды:
+- /start - Начать или перезапустить сессию терапии
+- /help - Показать это сообщение помощи
+- /info - Посмотреть свой прогресс и статус терапии
+- /cancel - Завершить текущий поток разговора
+- /feedback - Отправить отзыв (например, /feedback Ваше сообщение)
+- /resources - Получить ресурсы поддержки психического здоровья\n
+Для немедленной кризисной поддержки, пожалуйста, обратитесь в службу экстренной помощи в вашем регионе.`;
   }
 
   /**
@@ -108,40 +99,32 @@ For immediate crisis support, please contact emergency services in your area or 
       const userInfo = await this.application.getUserInfo(userId);
 
       if (!userInfo || !userInfo.conversation) {
-        return "I don't have any active sessions with you yet. Type /start to begin.";
+        return 'У меня пока нет активных сессий с вами. Напишите /start чтобы начать.';
       }
 
       // Format session information
-      let response = '*Your Therapy Session Info* 📊\n\n';
+      let response = '*Информация о вашей терапевтической сессии* 📊\n\n';
 
       // Conversation state
-      response += `*Current state*: ${this.formatConversationState(userInfo.conversation.state)}\n\n`;
+      response += `*Текущее состояние*: ${this.formatConversationState(userInfo.conversation.state)}\n\n`;
 
       // Session statistics
-      response += '*Session statistics*:\n';
-      response += `- Messages exchanged: ${userInfo.stats.messageCount}\n`;
-      response += `- Session duration: ${this.formatDuration(userInfo.stats.sessionDuration)}\n`;
+      response += '*Статистика сессии*:\n';
+      response += `- Обмен сообщениями: ${userInfo.stats.messageCount}\n`;
+      response += `- Продолжительность сессии: ${this.formatDuration(userInfo.stats.sessionDuration)}\n`;
 
       // Current plan information
       if (userInfo.plan) {
-        response += '\n*Current therapeutic plan*:\n';
-        response += `- Focus area: ${userInfo.plan.currentVersion?.content}\n`;
-
-        // // Progress highlights
-        // if (userInfo.progress && userInfo.progress.insights.length > 0) {
-        //   response += '\n*Progress highlights*:\n';
-        //   userInfo.progress.insights.slice(0, 3).forEach((insight) => {
-        //     response += `- ${insight}\n`;
-        //   });
-        // }
+        response += '\n*Текущий терапевтический план*:\n';
+        response += `- Область фокуса: ${userInfo.plan.currentVersion?.content}\n`;
       }
 
-      response += '\nContinue our conversation anytime by simply typing a message.';
+      response += '\nПродолжите нашу беседу в любое время, просто написав сообщение.';
 
       return response;
     } catch (error) {
       console.error(`Error retrieving user info for ${userId}:`, error);
-      return "I'm having trouble retrieving your session information right now. Please try again soon.";
+      return 'У меня возникли проблемы с получением информации о вашей сессии. Пожалуйста, попробуйте позже.';
     }
   }
 
@@ -155,74 +138,12 @@ For immediate crisis support, please contact emergency services in your area or 
       // Reset current conversation state
       await this.application.resetConversationState(userId);
 
-      return "I've reset our current conversation flow. You can start a new topic whenever you're ready.";
+      return 'Я сбросил текущий поток разговора. Вы можете начать новую тему, когда будете готовы.';
     } catch (error) {
       console.error(`Error canceling conversation for ${userId}:`, error);
-      return "I'm having trouble resetting our conversation right now. Please try again soon.";
+      return 'У меня возникли проблемы со сбросом нашего разговора. Пожалуйста, попробуйте позже.';
     }
   }
-
-  // /**
-  //  * Handles the /feedback command
-  //  * @param userId - The Telegram user ID
-  //  * @param args - Feedback message contents
-  //  * @returns Promise<string> - Confirmation message
-  //  */
-  // private async handleFeedbackCommand(userId: string, args: string[]): Promise<string> {
-  //   try {
-  //     // Check if feedback content was provided
-  //     if (!args || args.length === 0) {
-  //       return 'Please include your feedback after the command. For example: /feedback I found our session helpful today.';
-  //     }
-
-  //     // Join the args to form the complete feedback message
-  //     const feedbackMessage = args.join(' ');
-
-  //     // Store the feedback
-  //     await this.application.recordFeedback(userId, feedbackMessage);
-
-  //     return 'Thank you for your feedback! It helps me improve my support for you and others.';
-  //   } catch (error) {
-  //     console.error(`Error recording feedback from ${userId}:`, error);
-  //     return "I'm having trouble processing your feedback right now. Please try again soon.";
-  //   }
-  // }
-
-  // /**
-  //  * Handles the /resources command
-  //  * @param userId - The Telegram user ID
-  //  * @returns Promise<string> - Resources message
-  //  */
-  // private async handleResourcesCommand(userId: string): Promise<string> {
-  //   // Retrieve relevant resources based on user's history
-  //   const resources = await this.application.getRelevantResources(userId);
-
-  //   let response = '*Mental Health Resources* 🌱\n\n';
-
-  //   if (resources && resources.length > 0) {
-  //     resources.forEach((resource) => {
-  //       response += `*${resource.name}*\n`;
-  //       response += `${resource.description}\n`;
-  //       response += `Contact: ${resource.contact}\n\n`;
-  //     });
-  //   } else {
-  //     // Default resources if personalized ones are not available
-  //     response += '*Crisis Text Line*\n';
-  //     response += 'Text HOME to 741741 to connect with a Crisis Counselor\n';
-  //     response += 'Available 24/7 for mental health support\n\n';
-
-  //     response += '*National Suicide Prevention Lifeline*\n';
-  //     response += 'Call 1-800-273-8255\n';
-  //     response += 'Available 24/7 for anyone in suicidal crisis or emotional distress\n\n';
-
-  //     response += "*SAMHSA's National Helpline*\n";
-  //     response += 'Call 1-800-662-4357\n';
-  //     response +=
-  //       'Treatment referral and information service for individuals facing mental health or substance use disorders\n';
-  //   }
-
-  //   return response;
-  // }
 
   /**
    * Formats conversation state for display
@@ -232,17 +153,17 @@ For immediate crisis support, please contact emergency services in your area or 
   private formatConversationState(state: ConversationState): string {
     switch (state) {
       case ConversationState.INFO_GATHERING:
-        return 'Initial Assessment';
+        return 'Начальная оценка';
       case ConversationState.ACTIVE_GUIDANCE:
-        return 'Active Conversation';
+        return 'Активный разговор';
       case ConversationState.PLAN_REVISION:
-        return 'Plan Review';
+        return 'Пересмотр плана';
       case ConversationState.EMERGENCY_INTERVENTION:
-        return 'Support Intervention';
+        return 'Экстренное вмешательство';
       case ConversationState.SESSION_CLOSING:
-        return 'Session Wrap-up';
+        return 'Завершение сессии';
       default:
-        return 'Getting Started';
+        return 'Начало работы';
     }
   }
 
@@ -258,13 +179,29 @@ For immediate crisis support, please contact emergency services in your area or 
     const days = Math.floor(hours / 24);
 
     if (days > 0) {
-      return `${days} day${days > 1 ? 's' : ''} ${hours % 24} hour${hours % 24 !== 1 ? 's' : ''}`;
+      return `${days} ${this.pluralize(days, 'день', 'дня', 'дней')} ${hours % 24} ${this.pluralize(hours % 24, 'час', 'часа', 'часов')}`;
     } else if (hours > 0) {
-      return `${hours} hour${hours > 1 ? 's' : ''} ${minutes % 60} minute${minutes % 60 !== 1 ? 's' : ''}`;
+      return `${hours} ${this.pluralize(hours, 'час', 'часа', 'часов')} ${minutes % 60} ${this.pluralize(minutes % 60, 'минута', 'минуты', 'минут')}`;
     } else if (minutes > 0) {
-      return `${minutes} minute${minutes > 1 ? 's' : ''} ${seconds % 60} second${seconds % 60 !== 1 ? 's' : ''}`;
+      return `${minutes} ${this.pluralize(minutes, 'минута', 'минуты', 'минут')} ${seconds % 60} ${this.pluralize(seconds % 60, 'секунда', 'секунды', 'секунд')}`;
     } else {
-      return `${seconds} second${seconds !== 1 ? 's' : ''}`;
+      return `${seconds} ${this.pluralize(seconds, 'секунда', 'секунды', 'секунд')}`;
     }
+  }
+
+  /**
+   * Helper function for Russian pluralization
+   */
+  private pluralize(number: number, one: string, few: string, many: string): string {
+    const mod10 = number % 10;
+    const mod100 = number % 100;
+
+    if (mod10 === 1 && mod100 !== 11) {
+      return one;
+    }
+    if ([2, 3, 4].includes(mod10) && ![12, 13, 14].includes(mod100)) {
+      return few;
+    }
+    return many;
   }
 }

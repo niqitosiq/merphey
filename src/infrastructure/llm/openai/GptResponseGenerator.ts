@@ -6,6 +6,7 @@ import {
   TherapeuticResponse,
 } from '../../../domain/aggregates/conversation/entities/types';
 import { PlanVersion } from 'src/domain/aggregates/therapy/entities/PlanVersion';
+import { Message } from 'src/domain/aggregates/conversation/entities/Message';
 
 /**
  * Infrastructure service for generating therapeutic responses using OpenAI
@@ -25,11 +26,18 @@ export class GptResponseGenerator {
     context: ConversationContext,
     analysis: AnalysisResult,
     plan: PlanVersion | null,
+    message: Message,
   ): Promise<TherapeuticResponse> {
     try {
       // Build context-aware prompt that includes language instructions
       const currentState = context.currentState;
-      const prompt = this.buildTherapeuticPrompt(context, analysis, plan, analysis.language);
+      const prompt = this.buildTherapeuticPrompt(
+        context,
+        analysis,
+        plan,
+        analysis.language,
+        message,
+      );
 
       // Generate response with specific parameters for therapeutic context
       const completion = await this.openai.generateCompletion(prompt, {
@@ -37,7 +45,7 @@ export class GptResponseGenerator {
         maxTokens: 3000,
         presencePenalty: 0.6, // Encourage diverse responses
         frequencyPenalty: 0.2, // Reduce repetition
-        model: 'google/gemma-3-27b-it',
+        model: 'google/gemini-2.0-flash-001',
       });
 
       // Parse the response and return structured therapeutic response
@@ -103,7 +111,9 @@ export class GptResponseGenerator {
     analysis: AnalysisResult,
     plan: PlanVersion | null,
     userLanguage: string = 'en',
+    message: Message,
   ): string {
+    const recentMessages = context.history.slice(-20);
     const nextGoal =
       plan?.content.goals?.find((g) => g.codename === analysis.nextGoal) ||
       plan?.content?.goals?.[0];
@@ -116,6 +126,11 @@ export class GptResponseGenerator {
     return `You are PsychoBot, an advanced therapeutic AI assistant trained in evidence-based psychological approaches. You're having a conversation with a person seeking mental health support.
 
 ${languageInstruction}
+
+CONVERSATION HISTORY:
+${recentMessages.map((m) => `[${m.role}]: '${m.content}'`).join('\n')}
+[Latest User Message]: '${message.content}'
+
 
 CURRENT CONVERSATION STATE: ${context.currentState}
 NEXT CONVERSATION STATE: ${nextGoal?.state || context.currentState}

@@ -45,7 +45,7 @@ export class StateTransitionService {
   private async analyzeWithLLM(context: ConversationContext): Promise<TransitionAnalysis> {
     const prompt = this.createAnalysisPrompt(context);
     const response = await this.llmService.generateCompletion(prompt, {
-      model: 'google/gemma-3-27b-it',
+      model: 'google/gemini-2.0-flash-001',
     });
 
     return this.parseLLMResponse(response);

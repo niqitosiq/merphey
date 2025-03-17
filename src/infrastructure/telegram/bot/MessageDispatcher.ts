@@ -144,7 +144,7 @@ export class MessageDispatcher {
       console.error(`Error handling message from ${userId}:`, error);
       await this.sendResponse(
         userId,
-        'Sorry, I encountered an error processing your message. Please try again later.',
+        'Извините, произошла ошибка при обработке вашего сообщения. Пожалуйста, попробуйте позже.',
       );
     }
   }
@@ -160,7 +160,7 @@ export class MessageDispatcher {
     try {
       console.log(`[${userId}] Received command: /${command} ${args.join(' ')}`);
 
-      const response = await this.commandHandler.handleCommand(userId, command, args);
+      const response = await this.commandHandler.handleCommand(userId, command);
 
       await this.sendResponse(userId, response);
     } catch (error) {
@@ -215,23 +215,25 @@ export class MessageDispatcher {
    * @param resources - Crisis resources to share
    */
   async sendEmergencyAlert(userId: string, riskLevel: RiskLevel, resources: any[]): Promise<void> {
-    let message = '⚠️ *Important Support Resources* ⚠️\n\n';
+    let message = '⚠️ *Важные ресурсы поддержки* ⚠️\n\n';
 
     if (riskLevel === RiskLevel.CRITICAL) {
-      message += 'I notice you may be going through a difficult time right now.\n';
-      message += 'Please consider reaching out to one of these professional resources:\n\n';
+      message += 'Я вижу, что вам сейчас может быть очень тяжело.\n';
+      message +=
+        'Пожалуйста, рассмотрите возможность обратиться к одному из этих профессиональных ресурсов:\n\n';
     } else {
-      message += 'Here are some resources that might be helpful:\n\n';
+      message += 'Вот некоторые ресурсы, которые могут быть полезны:\n\n';
     }
 
     // Add resources to the message
-    resources.forEach((resource, index) => {
+    resources.forEach((resource) => {
       message += `*${resource.name}*: ${resource.contact}\n`;
       message += `${resource.description}\n\n`;
     });
 
     // Add footer message
-    message += "Remember, it's okay to ask for help. Professional support is available 24/7.";
+    message +=
+      'Помните, просить о помощи - это нормально. Профессиональная поддержка доступна 24/7.';
 
     // Send with high priority
     await this.sendResponse(userId, message, {
@@ -279,10 +281,14 @@ export class MessageDispatcher {
           chunk = remainingText.substring(0, breakPoint);
           remainingText = remainingText.substring(breakPoint + 1);
         } else {
-          // Just cut at maxLength
           chunk = remainingText.substring(0, maxLength);
           remainingText = remainingText.substring(maxLength);
         }
+      }
+
+      // Add continuation marker if this isn't the last chunk
+      if (remainingText.length > 0) {
+        chunk += '\n_(продолжение следует...)_';
       }
 
       chunks.push(chunk);

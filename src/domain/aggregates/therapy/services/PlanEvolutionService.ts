@@ -15,7 +15,7 @@ interface PlanValidationResult {
 
 export class PlanEvolutionService {
   private readonly CONTEXT_SIMILARITY_THRESHOLD = 0.7;
-  private readonly MAX_HISTORY_DEPTH = 20;
+  private readonly MAX_HISTORY_DEPTH = 40;
 
   constructor(
     private readonly planRepository: TherapeuticPlanRepository,
@@ -165,6 +165,7 @@ GOALS RULES:
 - Goals should be responsive to user's current emotional and cognitive state
 - Consider risk levels when formulating goals
 - Goals should build on user's progress and history
+- Don't repeat goals from latest plan if it is not required
 
 return format: {
   "goals": [
@@ -191,6 +192,7 @@ return format: {
    */
   private async getValidatedPlanContent(prompt: string): Promise<PlanContent> {
     const revisedContent = await this.llmGateway.generateCompletion(prompt, {
+      // model: 'google/gemma-3-27b-it',
       model: 'deepseek/deepseek-r1',
       maxTokens: 5000,
       temperature: 0.8,

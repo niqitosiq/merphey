@@ -29,7 +29,7 @@ async function bootstrap() {
     // Initialize LLM adapter
     const llmAdapter = new LLMAdapter(
       process.env.OPENROUTER_API_KEY || '',
-      process.env.DEFAULT_MODEL || 'google/gemma-3-27b-it',
+      process.env.DEFAULT_MODEL || 'google/gemini-2.0-flash-001',
     );
 
     // Initialize repositories

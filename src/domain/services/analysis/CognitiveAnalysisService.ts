@@ -33,7 +33,7 @@ export class ContextAnalyzer {
     const prompt = this.constructAnalysisPrompt(message, plan, history);
     console.log(prompt);
     const response = await this.llmService.generateCompletion(prompt, {
-      model: 'google/gemma-3-27b-it',
+      model: 'google/gemini-2.0-flash-001',
     });
 
     try {

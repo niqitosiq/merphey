@@ -148,6 +148,7 @@ export class MentalHealthApplication {
           shouldBeRevised: false,
         },
         updatedVersion,
+        message,
       );
 
       console.log('therapeuticResponse', therapeuticResponse.content);
@@ -175,6 +176,7 @@ export class MentalHealthApplication {
       context,
       analysis,
       context.therapeuticPlan.currentVersion,
+      message,
     );
 
     const sessionProgress = this.progressTracker.calculateSessionMetrics(
