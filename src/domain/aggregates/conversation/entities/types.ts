@@ -1,7 +1,8 @@
-import { ConversationState, PlanVersion, RiskLevel } from '@prisma/client';
+import { ConversationState, RiskLevel } from '@prisma/client';
 import { TherapeuticPlan } from '../../therapy/entities/TherapeuticPlan';
 import { RiskAssessment } from './RiskAssessment';
 import { Message } from './Message';
+import { PlanVersion } from '../../therapy/entities/PlanVersion';
 
 /**
  * Represents the complete context of a conversation
@@ -99,11 +100,6 @@ export interface StateTransition {
    * New state after transition
    */
   to: ConversationState;
-
-  /**
-   * Explanation of why the transition occurred
-   */
-  reason: string;
 }
 
 /**

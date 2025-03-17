@@ -127,3 +127,22 @@ The system follows a clean architecture with clear separation of concerns:
    - Add support for additional messaging platforms
    - Implement load balancing
    - Enhance data security measures
+
+
+## how should it work
+
+analyze is the current goals reached or context was changed and previous plan is incorrect  (return shouldRevised, nextGoal, goalsReached) (blocking)
+
+shouldRevised == true ->
+   - Revise plan, analyze message history from previous plan and return new plan, goals, (blocking)
+   - create analyzis without llm, just taking first goal as next (blocking)
+   - respond with the new plan goals 
+shouldRevised == false ->
+   - respond using the previous plan goals
+
+responding -> 
+   - always on the user's language
+   - taking current goal, setting up the state, and make response to the user based on it  (blocking)
+
+
+goals should include associated STATE in every goal

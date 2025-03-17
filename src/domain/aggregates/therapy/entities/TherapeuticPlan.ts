@@ -29,7 +29,7 @@ export class TherapeuticPlan
       crypto.randomUUID(),
       this.id,
       this.currentVersionId,
-      content as any,
+      content,
       null,
       nextVersion,
       new Date(),

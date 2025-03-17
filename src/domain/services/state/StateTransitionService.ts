@@ -2,6 +2,7 @@ import { ConversationState, RiskLevel } from '../../shared/enums';
 import { LLMAdapter } from '../../../infrastructure/llm/openai/LLMAdapter';
 import { TransitionValidator } from './TransitionValidator';
 import { ConversationContext, StateTransition } from '../../aggregates/conversation/entities/types';
+import { AnalysisResult } from '../analysis/CognitiveAnalysisService';
 
 interface TransitionAnalysis {
   suggestedState: ConversationState;
@@ -15,29 +16,36 @@ export class StateTransitionService {
     private transitionValidator: TransitionValidator,
   ) {}
 
-  async determineTransition(context: ConversationContext): Promise<StateTransition> {
+  async determineTransition(
+    context: ConversationContext,
+    analysis: AnalysisResult,
+  ): Promise<StateTransition> {
     // 1. Immediate emergency handling
     if (this.requiresEmergencyTransition(context)) {
       return this.emergencyTransition(context);
     }
 
+    const newState: ConversationState =
+      context.therapeuticPlan.currentVersion?.content.goals?.find(
+        (g) => g.codename === analysis.nextGoal,
+      )?.state || context.currentState;
+
     // 2. LLM-based state analysis
-    const analysis = await this.analyzeWithLLM(context);
+    // const analysis = await this.analyzeWithLLM(context);
 
     // 3. Validate transition possibility
-    this.validateTransition(context.currentState, analysis.suggestedState);
+    this.validateTransition(context.currentState, newState);
 
     return {
       from: context.currentState,
-      to: analysis.suggestedState,
-      reason: analysis.reasoning,
+      to: newState,
     };
   }
 
   private async analyzeWithLLM(context: ConversationContext): Promise<TransitionAnalysis> {
     const prompt = this.createAnalysisPrompt(context);
     const response = await this.llmService.generateCompletion(prompt, {
-      model: 'google/gemini-2.0-flash-exp:free',
+      model: 'google/gemma-3-27b-it',
     });
 
     return this.parseLLMResponse(response);
@@ -105,7 +113,6 @@ Respond ONLY in JSON format:
     return {
       from: context.currentState,
       to: ConversationState.EMERGENCY_INTERVENTION,
-      reason: 'Critical risk detected - immediate intervention required',
     };
   }
 

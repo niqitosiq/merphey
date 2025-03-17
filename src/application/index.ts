@@ -37,11 +37,6 @@ async function bootstrap() {
     const userRepository = new UserRepository();
 
     // Initialize domain services
-    const conversationService = new ConversationService(
-      conversationRepository,
-      therapeuticPlanRepository,
-      userRepository,
-    );
     const messageValidator = new MessageValidator();
     const messageFactory = new MessageFactory();
     const crisisDetector = new CrisisDetector(llmAdapter);
@@ -51,6 +46,12 @@ async function bootstrap() {
     const stateManager = new StateTransitionService(llmAdapter, new TransitionValidator());
     const responseGenerator = new GptResponseGenerator(llmAdapter);
     const planService = new PlanEvolutionService(therapeuticPlanRepository, llmAdapter);
+    const conversationService = new ConversationService(
+      conversationRepository,
+      therapeuticPlanRepository,
+      userRepository,
+      planService,
+    );
     const progressTracker = new ProgressTracker();
     const responseComposer = new ResponseComposer();
     const errorHandler = new ErrorHandler();

@@ -2,30 +2,11 @@ import { TherapeuticPlan } from '../../aggregates/therapy/entities/TherapeuticPl
 import { LLMAdapter } from '../../../infrastructure/llm/openai/LLMAdapter';
 import { Message } from 'src/domain/aggregates/conversation/entities/Message';
 import { UserMessage } from 'src/domain/aggregates/conversation/entities/types';
+import { Goal } from 'src/domain/aggregates/therapy/entities/PlanVersion';
 
 export interface AnalysisResult {
-  emotionalThemes: {
-    primary: string;
-    secondary: string[];
-    intensity: number;
-  };
-  cognitivePatternsIdentified: {
-    pattern: string;
-    evidence: string;
-    severity: number;
-  }[];
-  therapeuticProgress: {
-    alignmentWithGoals: number;
-    identifiedSetbacks: string[];
-    improvements: string[];
-  };
-  engagementMetrics: {
-    coherence: number;
-    openness: number;
-    resistanceLevel: number;
-  };
-  therapeuticOpportunities: string[];
   shouldBeRevised: boolean;
+  nextGoal?: Goal['codename'];
   language: string;
 }
 
@@ -43,14 +24,16 @@ export class ContextAnalyzer {
    * @param history - Previous conversation history
    * @returns Analysis - Cognitive and emotional insights from the message
    */
+
   async analyzeMessage(
     message: Message,
     plan: TherapeuticPlan | null,
     history: UserMessage[],
   ): Promise<AnalysisResult> {
     const prompt = this.constructAnalysisPrompt(message, plan, history);
+    console.log(prompt);
     const response = await this.llmService.generateCompletion(prompt, {
-      model: 'deepseek/deepseek-r1',
+      model: 'google/gemma-3-27b-it',
     });
 
     try {
@@ -60,6 +43,10 @@ export class ContextAnalyzer {
     }
   }
 
+  /**
+   * Constructs a comprehensive prompt for message analysis
+   * Includes user context, therapeutic goals, and history
+   */
   private constructAnalysisPrompt(
     message: Message,
     plan: TherapeuticPlan | null,
@@ -67,54 +54,84 @@ export class ContextAnalyzer {
   ): string {
     console.log('Analyzing message:', message.content);
 
+    // Process recent conversation history with roles preserved
     const recentHistory = history
-      ?.slice(-5)
-      .map((m) => m.content)
+      ?.slice(-15)
+      .map((m) => `[${m.role}]: ${m.content}`)
       .join('\n');
+
+    // Extract plan content details
     const planContent = plan?.currentVersion?.getContent();
-    const goals = planContent ? planContent.goals?.join(', ') : 'No current goals';
 
-    return `Analyze this therapeutic conversation message with context:
+    // Format goals with their state and approach
+    const goals = planContent?.goals
+      ? planContent.goals
+          .map(
+            (g) =>
+              `[${g.state}]: ${g.content}\nApproach: ${g.approach}; Identifier: "${g.codename}"`,
+          )
+          .join('\n\n')
+      : 'No current goals';
 
-Current message: "${message.content}"
+    // Extract techniques and other plan elements
+    const techniques = planContent?.techniques?.join(', ') || 'No specific techniques';
+    const approach = planContent?.approach || 'No general approach defined';
+    const focus = planContent?.focus || 'No specific focus area';
 
-Recent conversation history:
-${recentHistory}
+    // Extract user insights from message metadata
+    const userInsights =
+      history
+        ?.filter((msg) => msg.metadata?.breakthrough || msg.metadata?.challenge)
+        .map((msg) => `- ${msg.metadata?.breakthrough || msg.metadata?.challenge}`)
+        .join('\n') || 'No specific insights recorded yet';
 
-Therapeutic goals: ${goals}
+    return `THERAPEUTIC MESSAGE ANALYSIS REQUEST
 
-Return ONLY json.
+MESSAGE TO ANALYZE: "${message.content}"
 
-If the analysis shouldn't be revised, then return JSON without additional fields:
+CONVERSATION CONTEXT:
+${recentHistory || 'No conversation history available'}
+
+USER INSIGHTS:
+${userInsights}
+
+THERAPEUTIC PLAN CONTEXT:
+- Focus Area: ${focus}
+- General Approach: ${approach}
+- Techniques: ${techniques}
+
+CURRENT GOALS:
+${goals}
+ 
+ANALYSIS TASKS:
+1. Evaluate if any current goals have been reached based on the message
+2. Determine if the user's context has changed significantly, making the current plan incorrect
+3. Identify the most appropriate goal to focus on next
+  - It can be the same goal, if you think that it isn't reached
+  - Validate that this goal exists in the goals list
+4. Detect the language used by the user
+5. Determine if the therapeutic plan should be revised (shouldBeRevised) based on the following conditions:
+  - User reveals significant new information not accounted for in the current plan
+  - User expresses dissatisfaction with the current approach or techniques
+  - User demonstrates substantial progress that warrants advancing to more complex goals
+  - User shows resistance to the current therapeutic direction
+  - User mentions new symptoms, challenges, or life events that affect treatment priorities
+  - User's emotional state has changed dramatically (e.g., from stable to distressed)
+  - User explicitly requests a different approach or focus area
+  - Current goals appear to be inappropriate or ineffective based on user's responses
+  - User demonstrates cognitive or behavioral patterns that conflict with the current plan
+  - Therapeutic rapport seems to be deteriorating under the current approach
+  - The goal isn't applicable to current discussion
+  - You fill that user can't proceed with current goal
+
+INSTRUCTIONS FOR RESPONSE:
+Return ONLY valid JSON in the following format without any additional text:
+
 {
-  "shouldBeRevised": false,
-}
-
-Provide a detailed analysis in JSON format covering:
-{
-  "shouldBeRevised": true,
-  "emotionalThemes": {
-    "primary": "main emotion",
-    "secondary": ["other emotions"],
-    "intensity": 0-1
-  },
-  "cognitivePatternsIdentified": [{
-    "pattern": "identified pattern",
-    "evidence": "supporting text",
-    "severity": 0-1
-  }],
-  "therapeuticProgress": {
-    "alignmentWithGoals": 0-1,
-    "identifiedSetbacks": ["setback descriptions"],
-    "improvements": ["improvement descriptions"]
-  },
-  "engagementMetrics": {
-    "coherence": 0-1,
-    "openness": 0-1,
-    "resistanceLevel": 0-1
-  },
-  "therapeuticOpportunities": ["opportunity descriptions"],
-  "language": "user language"
+  "shouldBeRevised": true/false,  // Set true if any of the revision conditions are met
+  "nextGoal": "meaningful_identifier", // The identifier of the next step
+  "language": "detected language code or name",
+  "reason": "Brief explanation of why the plan should/should not be revised"
 }`;
   }
 

@@ -1,7 +1,11 @@
 import { AnalysisResult } from 'src/domain/services/analysis/CognitiveAnalysisService';
 import { LLMAdapter } from './LLMAdapter';
 import { ConversationState } from '../../../domain/shared/enums';
-import { TherapeuticResponse } from '../../../domain/aggregates/conversation/entities/types';
+import {
+  ConversationContext,
+  TherapeuticResponse,
+} from '../../../domain/aggregates/conversation/entities/types';
+import { PlanVersion } from 'src/domain/aggregates/therapy/entities/PlanVersion';
 
 /**
  * Infrastructure service for generating therapeutic responses using OpenAI
@@ -18,12 +22,14 @@ export class GptResponseGenerator {
    * @returns TherapeuticResponse - Contains response content and insights
    */
   async generateTherapeuticResponse(
-    currentState: ConversationState,
+    context: ConversationContext,
     analysis: AnalysisResult,
+    plan: PlanVersion | null,
   ): Promise<TherapeuticResponse> {
     try {
       // Build context-aware prompt that includes language instructions
-      const prompt = this.buildTherapeuticPrompt(currentState, analysis, analysis.language);
+      const currentState = context.currentState;
+      const prompt = this.buildTherapeuticPrompt(context, analysis, plan, analysis.language);
 
       // Generate response with specific parameters for therapeutic context
       const completion = await this.openai.generateCompletion(prompt, {
@@ -31,7 +37,7 @@ export class GptResponseGenerator {
         maxTokens: 3000,
         presencePenalty: 0.6, // Encourage diverse responses
         frequencyPenalty: 0.2, // Reduce repetition
-        model: 'google/gemini-2.0-flash-exp:free',
+        model: 'google/gemma-3-27b-it',
       });
 
       // Parse the response and return structured therapeutic response
@@ -39,7 +45,7 @@ export class GptResponseGenerator {
     } catch (error) {
       console.error('Error generating therapeutic response:', error);
       // Provide a safe fallback response in case of errors
-      return this.getFallbackResponse(currentState);
+      return this.getFallbackResponse(context.currentState);
     }
   }
 
@@ -93,11 +99,15 @@ export class GptResponseGenerator {
    * @param userLanguage - The language to generate the response in
    */
   private buildTherapeuticPrompt(
-    currentState: ConversationState,
+    context: ConversationContext,
     analysis: AnalysisResult,
+    plan: PlanVersion | null,
     userLanguage: string = 'en',
   ): string {
-    // Create language instruction based on user language
+    const nextGoal =
+      plan?.content.goals?.find((g) => g.codename === analysis.nextGoal) ||
+      plan?.content?.goals?.[0];
+
     const languageInstruction =
       userLanguage !== 'english'
         ? `IMPORTANT: Only the "content" field should be in ${userLanguage} language as it will be shown directly to the user. All other fields (insights, suggestedTechniques, etc.) must remain in English for internal processing.`
@@ -107,19 +117,20 @@ export class GptResponseGenerator {
 
 ${languageInstruction}
 
-CURRENT CONVERSATION STATE: ${currentState}
+CURRENT CONVERSATION STATE: ${context.currentState}
+NEXT CONVERSATION STATE: ${nextGoal?.state || context.currentState}
 
-USER ANALYSIS:
-- Primary emotional theme: ${analysis.emotionalThemes.primary || 'Not identified'}
-- Secondary emotional theme: ${analysis.emotionalThemes.secondary || 'Not identified'}
-- Emotional intensity: ${analysis.emotionalThemes.intensity || 'Moderate'}
-- Engagement level: Coherence (${analysis.engagementMetrics?.coherence || 'medium'}), Openness (${analysis.engagementMetrics?.openness || 'medium'}), Resistance (${analysis.engagementMetrics?.resistanceLevel || 'low'})
-- Identified challenges: ${analysis.therapeuticProgress?.identifiedSetbacks?.join(', ') || 'None identified'}
-- Recent improvements: ${analysis.therapeuticProgress?.improvements?.join(', ') || 'None identified'}
-- Therapeutic opportunities: ${analysis.therapeuticOpportunities?.join(', ') || 'Continue building rapport'}
+${
+  nextGoal
+    ? `THERAPEUTIC PLAN:
+- Goal: ${nextGoal.content || 'Continue supportive conversation'}
+- Approach: ${nextGoal.approach || 'Use evidence-based therapeutic techniques'}
+- Content focus: ${nextGoal.content || 'Address user concerns with empathy and structure'}`
+    : 'No specific therapeutic plan available - use general supportive approach'
+}
 
 THERAPEUTIC GUIDELINES:
-${this.getStateSpecificGuidelines(currentState)}
+${this.getStateSpecificGuidelines(context.currentState)}
 
 RESPONSE INSTRUCTIONS:
 1. Respond with empathy and authenticity

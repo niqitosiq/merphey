@@ -15,6 +15,7 @@ import {
   ConversationContext,
   SessionResponse,
   ProcessingResult,
+  TherapeuticResponse,
 } from '../domain/aggregates/conversation/entities/types';
 import { Message } from '../domain/aggregates/conversation/entities/Message';
 
@@ -100,20 +101,62 @@ export class MentalHealthApplication {
     context: ConversationContext,
     message: Message,
   ): Promise<ProcessingResult> {
-    const [riskAssessment, stateTransition, analysis] = await Promise.all([
-      this.riskAssessor.detectImmediateRisk(message.content, context.riskHistory),
-      this.stateManager.determineTransition(context),
-      this.contextAnalyzer.analyzeMessage(
-        message,
-        context.therapeuticPlan || null,
-        context.history,
-      ),
-    ]);
+    const riskAssessment = await this.riskAssessor.detectImmediateRisk(
+      message.content,
+      context.riskHistory,
+    );
 
-    const [therapeuticResponse, updatedVersion] = await Promise.all([
-      this.responseGenerator.generateTherapeuticResponse(context.currentState, analysis),
-      this.planService.revisePlan(context.therapeuticPlan, context, analysis),
-    ]);
+    const analysis = await this.contextAnalyzer.analyzeMessage(
+      message,
+      context.therapeuticPlan || null,
+      context.history,
+    );
+
+    const stateTransition = await this.stateManager.determineTransition(context, analysis);
+
+    let therapeuticResponse: TherapeuticResponse;
+    if (analysis.shouldBeRevised) {
+      const updatedVersion = await this.planService.revisePlan(
+        context.therapeuticPlan,
+        context,
+        message,
+      );
+
+      if (!updatedVersion.content.goals) {
+        throw new Error('Updated version does not contain goals.');
+      }
+
+      therapeuticResponse = await this.responseGenerator.generateTherapeuticResponse(
+        context,
+        {
+          language: analysis.language,
+          nextGoal: updatedVersion.content.goals[0]?.codename,
+          shouldBeRevised: false,
+        },
+        updatedVersion,
+      );
+
+      console.log('therapeuticResponse', therapeuticResponse.content);
+
+      const sessionProgress = this.progressTracker.calculateSessionMetrics(
+        context.history,
+        therapeuticResponse,
+      );
+
+      return {
+        riskAssessment,
+        stateTransition,
+        therapeuticResponse,
+        updatedVersion,
+        sessionProgress,
+      };
+    }
+
+    therapeuticResponse = await this.responseGenerator.generateTherapeuticResponse(
+      context,
+      analysis,
+      context.therapeuticPlan.currentVersion,
+    );
 
     const sessionProgress = this.progressTracker.calculateSessionMetrics(
       context.history,
@@ -124,7 +167,7 @@ export class MentalHealthApplication {
       riskAssessment,
       stateTransition,
       therapeuticResponse,
-      updatedVersion,
+      updatedVersion: null,
       sessionProgress,
     };
   }
@@ -137,10 +180,10 @@ export class MentalHealthApplication {
   async startSession(userId: string): Promise<void> {
     try {
       // Create initial conversation context if it doesn't exist
-      const existingContext = await this.conversationService.getConversationContext(userId);
-      if (!existingContext) {
-        await this.conversationService.initializeConversationContext(userId);
-      }
+      // const existingContext = await this.conversationService.getConversationContext(userId);
+      // if (!existingContext) {
+      //   // await this.conversationService.initializeConversationContext(userId);
+      // }
     } catch (error: any) {
       this.errorHandler.handleProcessingError(error, userId);
     }

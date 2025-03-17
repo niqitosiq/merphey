@@ -253,7 +253,7 @@ export class TherapeuticPlanRepository {
       prismaVersion.id,
       prismaVersion.planId,
       prismaVersion.previousVersionId || null,
-      prismaVersion.content,
+      JSON.parse(prismaVersion.content as string) as PlanContent,
       prismaVersion.validationScore || null,
       prismaVersion.version,
       prismaVersion.createdAt,

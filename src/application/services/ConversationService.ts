@@ -11,6 +11,7 @@ import { ConversationState, RiskLevel } from '@prisma/client';
 import { ApplicationError } from '../../shared/errors/application-errors';
 import { Message } from '@prisma/client';
 import { UserRepository } from 'src/infrastructure/persistence/postgres/UserRepository';
+import { PlanEvolutionService } from 'src/domain/aggregates/therapy/services/PlanEvolutionService';
 
 /**
  * Application service responsible for managing conversation lifecycle
@@ -21,6 +22,7 @@ export class ConversationService {
     private conversationRepository: ConversationRepository,
     private planRepository: TherapeuticPlanRepository,
     private userRepository: UserRepository,
+    private planEvolutionService: PlanEvolutionService,
   ) {}
 
   generateId(): string {
@@ -44,11 +46,7 @@ export class ConversationService {
 
       const therapeuticPlan = await this.planRepository.createPlan({
         userId,
-        initialContent: {
-          goals: ['get to know the person better', 'establish contact', 'find out why user came'],
-          approach: 'open-ended questions',
-          techniques: ['active listening', 'empathy'],
-        },
+        initialContent: this.planEvolutionService.generateInitialPlan(),
       });
 
       await this.conversationRepository.updateTherapeuticPlan(
@@ -225,16 +223,16 @@ export class ConversationService {
         const currentPlan = context.therapeuticPlan;
         const updatedPlanVersion = processingResult.updatedVersion;
 
-        if (currentPlan) {
+        if (updatedPlanVersion) {
           await this.planRepository.createPlanVersion(
             currentPlan.id,
             currentPlan.currentVersionId,
-            updatedPlanVersion.content || {},
+            JSON.stringify(updatedPlanVersion.content),
             updatedPlanVersion.validationScore || 1,
           );
         }
 
-        console.log(JSON.stringify(currentPlan), 'currentPlan');
+        console.log(JSON.stringify(updatedPlanVersion), 'updatedPlanVersion');
       }
 
       // Convert messages to UserMessage type with proper metadata
