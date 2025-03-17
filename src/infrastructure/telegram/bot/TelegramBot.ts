@@ -4,6 +4,7 @@ import { TextMessageHandler } from '../handlers/TextMessageHandler';
 import { CommandHandler } from '../handlers/CommandHandler';
 import { MentalHealthApplication } from '../../../application/MentalHealthApplication';
 import dotenv from 'dotenv';
+import { EventBus } from 'src/shared/events/EventBus';
 
 /**
  * Main Telegram bot class that bootstraps the bot functionality
@@ -16,7 +17,11 @@ export class TelegramBot {
    * Creates and initializes the Telegram bot
    * @param application - The core application instance
    */
-  constructor(private readonly application: MentalHealthApplication) {
+  constructor(
+    private readonly application: MentalHealthApplication,
+
+    private readonly eventBus: EventBus,
+  ) {
     // Load environment variables
     dotenv.config();
 
@@ -36,6 +41,7 @@ export class TelegramBot {
       commandHandler,
       application,
       token,
+      this.eventBus,
     );
 
     console.log('Telegram bot initialized and ready to handle messages');
@@ -55,10 +61,13 @@ export class TelegramBot {
  * @param application - The core application instance
  * @returns TelegramBot instance
  */
-export function startTelegramBot(application: MentalHealthApplication): TelegramBot {
+export function startTelegramBot(
+  application: MentalHealthApplication,
+  eventBus: EventBus,
+): TelegramBot {
   try {
     console.log('Starting Telegram bot...');
-    const bot = new TelegramBot(application);
+    const bot = new TelegramBot(application, eventBus);
     console.log('Telegram bot started successfully');
     return bot;
   } catch (error) {

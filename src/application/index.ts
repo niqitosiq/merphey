@@ -18,6 +18,7 @@ import { ProgressTracker, ResponseComposer } from './services/ProgressTracker';
 import { ErrorHandler } from '../shared/errors/application-errors';
 import { RiskModel } from '../domain/services/risk/RiskModel';
 import { UserRepository } from '../infrastructure/persistence/postgres/UserRepository';
+import { EventBus } from '../shared/events/EventBus';
 
 async function bootstrap() {
   try {
@@ -55,6 +56,7 @@ async function bootstrap() {
     const progressTracker = new ProgressTracker();
     const responseComposer = new ResponseComposer();
     const errorHandler = new ErrorHandler();
+    const eventBus = new EventBus();
 
     // Initialize main application
     const application = new MentalHealthApplication(
@@ -69,10 +71,11 @@ async function bootstrap() {
       progressTracker,
       responseComposer,
       errorHandler,
+      eventBus,
     );
 
     // Initialize and start Telegram bot
-    const bot = startTelegramBot(application);
+    const bot = startTelegramBot(application, eventBus);
 
     console.log('PsychoBot is running! 🤖');
   } catch (error) {

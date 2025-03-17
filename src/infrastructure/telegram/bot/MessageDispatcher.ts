@@ -3,6 +3,8 @@ import { CommandHandler } from '../handlers/CommandHandler';
 import { MentalHealthApplication } from '../../../application/MentalHealthApplication';
 import TelegramBot from 'node-telegram-bot-api';
 import { RiskLevel } from '../../../domain/shared/enums';
+import { EventBus } from '../../../shared/events/EventBus';
+import { EventTypes, AskUserToWaitEvent, SendTypingEvent } from '../../../shared/events/EventTypes';
 
 /**
  * Dispatches incoming Telegram messages to appropriate handlers
@@ -23,9 +25,11 @@ export class MessageDispatcher {
     private readonly commandHandler: CommandHandler,
     private readonly application: MentalHealthApplication,
     token: string,
+    private readonly eventBus: EventBus,
   ) {
     this.bot = new TelegramBot(token, { polling: true });
     this.setupListeners();
+    this.setupEventBusListeners();
   }
 
   /**
@@ -57,6 +61,70 @@ export class MessageDispatcher {
     this.bot.on('polling_error', (error) => {
       console.error('Telegram polling error:', error);
     });
+  }
+
+  /**
+   * Sets up event listeners for the event bus
+   */
+  private setupEventBusListeners(): void {
+    // Listen for ASK_USER_TO_WAIT events
+    this.eventBus.subscribe(EventTypes.ASK_USER_TO_WAIT, (data: AskUserToWaitEvent) =>
+      this.handleAskUserToWait(data),
+    );
+
+    // Listen for SEND_TYPING events
+    this.eventBus.subscribe(EventTypes.SEND_TYPING, (data: SendTypingEvent) =>
+      this.handleSendTyping(data),
+    );
+  }
+
+  /**
+   * Handler for ASK_USER_TO_WAIT events
+   * @param data - Event data containing userId and wait message
+   */
+  private async handleAskUserToWait(data: AskUserToWaitEvent): Promise<void> {
+    try {
+      const { userId, message } = data;
+
+      console.log(`[${userId}] Sending wait message: ${this.truncateMessage(message)}`);
+
+      await this.sendResponse(userId, message, { parse_mode: 'Markdown' });
+    } catch (error) {
+      console.error('Error handling ASK_USER_TO_WAIT event:', error);
+    }
+  }
+
+  /**
+   * Handler for SEND_TYPING events
+   * @param data - Event data containing userId and optional duration
+   */
+  private async handleSendTyping(data: SendTypingEvent): Promise<void> {
+    try {
+      const { userId, durationMs = 3000 } = data;
+
+      console.log(`[${userId}] Sending typing indicator for ${durationMs}ms`);
+
+      await this.bot.sendChatAction(userId, 'typing');
+
+      // For longer durations, we need to send the action multiple times
+      // because Telegram's typing indicator only lasts about 5 seconds
+      if (durationMs > 5000) {
+        const intervals = Math.floor(durationMs / 4000);
+        let remainingIntervals = intervals;
+
+        const interval = setInterval(async () => {
+          remainingIntervals--;
+
+          if (remainingIntervals <= 0) {
+            clearInterval(interval);
+          } else {
+            await this.bot.sendChatAction(userId, 'typing');
+          }
+        }, 4000);
+      }
+    } catch (error) {
+      console.error('Error handling SEND_TYPING event:', error);
+    }
   }
 
   /**
@@ -211,7 +279,7 @@ export class MessageDispatcher {
           chunk = remainingText.substring(0, breakPoint);
           remainingText = remainingText.substring(breakPoint + 1);
         } else {
-          // If no good break point, just cut at maxLength
+          // Just cut at maxLength
           chunk = remainingText.substring(0, maxLength);
           remainingText = remainingText.substring(maxLength);
         }

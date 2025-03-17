@@ -18,6 +18,7 @@ import {
   TherapeuticResponse,
 } from '../domain/aggregates/conversation/entities/types';
 import { Message } from '../domain/aggregates/conversation/entities/Message';
+import { EventBus } from 'src/shared/events/EventBus';
 
 /**
  * Main application class that orchestrates the mental health chatbot workflow
@@ -36,6 +37,7 @@ export class MentalHealthApplication {
     private progressTracker: ProgressTracker,
     private responseComposer: ResponseComposer,
     private errorHandler: ErrorHandler,
+    private eventBus: EventBus,
   ) {}
 
   /**
@@ -106,6 +108,10 @@ export class MentalHealthApplication {
       context.riskHistory,
     );
 
+    this.eventBus.publish('SEND_TYPING', {
+      userId: context.userId,
+      durationMs: 5000,
+    });
     const analysis = await this.contextAnalyzer.analyzeMessage(
       message,
       context.therapeuticPlan || null,
@@ -116,6 +122,10 @@ export class MentalHealthApplication {
 
     let therapeuticResponse: TherapeuticResponse;
     if (analysis.shouldBeRevised) {
+      this.eventBus.publish('ASK_USER_TO_WAIT', {
+        userId: context.userId,
+        message: 'Мне нужно подумать... Пожалуйста, подождите',
+      });
       const updatedVersion = await this.planService.revisePlan(
         context.therapeuticPlan,
         context,
@@ -126,6 +136,10 @@ export class MentalHealthApplication {
         throw new Error('Updated version does not contain goals.');
       }
 
+      this.eventBus.publish('SEND_TYPING', {
+        userId: context.userId,
+        durationMs: 5000,
+      });
       therapeuticResponse = await this.responseGenerator.generateTherapeuticResponse(
         context,
         {
@@ -142,6 +156,11 @@ export class MentalHealthApplication {
         context.history,
         therapeuticResponse,
       );
+
+      this.eventBus.publish('SEND_TYPING', {
+        userId: context.userId,
+        durationMs: 5000,
+      });
 
       return {
         riskAssessment,
