@@ -50,7 +50,7 @@ export class ContextAnalyzer {
   ): Promise<AnalysisResult> {
     const prompt = this.constructAnalysisPrompt(message, plan, history);
     const response = await this.llmService.generateCompletion(prompt, {
-      model: 'google/gemini-2.0-flash-exp:free',
+      model: 'deepseek/deepseek-r1',
     });
 
     try {
@@ -85,9 +85,14 @@ Therapeutic goals: ${goals}
 
 Return ONLY json.
 
+If the analysis shouldn't be revised, then return JSON without additional fields:
+{
+  "shouldBeRevised": false,
+}
+
 Provide a detailed analysis in JSON format covering:
 {
-  "shouldBeRevised": true/false,
+  "shouldBeRevised": true,
   "emotionalThemes": {
     "primary": "main emotion",
     "secondary": ["other emotions"],

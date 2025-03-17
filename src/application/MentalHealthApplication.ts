@@ -100,65 +100,26 @@ export class MentalHealthApplication {
     context: ConversationContext,
     message: Message,
   ): Promise<ProcessingResult> {
-    // Phase 1: Immediate risk analysis
-    // Analyzes the message for potential risk factors and assigns a risk level
-    const riskAssessment = await this.riskAssessor.detectImmediateRisk(
-      message.content,
-      context.riskHistory,
-    );
-    // Uses NLP and pattern matching to detect concerning content
+    const [riskAssessment, stateTransition, analysis] = await Promise.all([
+      this.riskAssessor.detectImmediateRisk(message.content, context.riskHistory),
+      this.stateManager.determineTransition(context),
+      this.contextAnalyzer.analyzeMessage(
+        message,
+        context.therapeuticPlan || null,
+        context.history,
+      ),
+    ]);
 
-    // Emergency handling
-    // If critical risk is detected, bypass normal pipeline and trigger emergency protocols
-    // if (riskAssessment.level === 'CRITICAL') {
-    //   return this.emergencyService.handleCriticalSituation(context, message, riskAssessment);
-    // }
-    // This may involve notifying human moderators or providing crisis resources
+    const [therapeuticResponse, updatedVersion] = await Promise.all([
+      this.responseGenerator.generateTherapeuticResponse(context.currentState, analysis),
+      this.planService.revisePlan(context.therapeuticPlan, context, analysis),
+    ]);
 
-    // Phase 2: Contextual analysis
-    // Analyzes the message in the context of the user's history and therapeutic plan
-    const analysis = await this.contextAnalyzer.analyzeMessage(
-      message,
-      context.therapeuticPlan || null,
-      context.history,
-    );
-    // Identifies themes, emotional states, and cognitive patterns
-
-    // Phase 3: State management
-    // Determines if the conversation state should transition based on the analysis
-    const stateTransition = await this.stateManager.determineTransition(context);
-    // Uses state machine rules to manage the therapeutic flow
-
-    // Phase 4: Therapeutic response generation
-    // Generates an appropriate therapeutic response based on:
-    // - Current conversation state
-    // - Risk assessment
-    // - Contextual analysis
-    // - Therapeutic plan goals
-
-    // Phase 5: Plan evolution
-    // Evaluates if the therapeutic plan needs revision based on new insights
-    // May create a new version of the plan with adjusted techniques or goals
-    let updatedVersion = await this.planService.revisePlan(
-      context.therapeuticPlan,
-      context,
-      analysis,
-    );
-
-    const therapeuticResponse = await this.responseGenerator.generateTherapeuticResponse(
-      context.currentState,
-      analysis,
-    );
-
-    // Phase 6: Session progression
-    // Calculates metrics about the session's therapeutic progress
     const sessionProgress = this.progressTracker.calculateSessionMetrics(
       context.history,
       therapeuticResponse,
     );
-    // Tracks engagement levels, breakthrough moments, and ongoing challenges
 
-    // Return the complete processing result
     return {
       riskAssessment,
       stateTransition,
@@ -166,7 +127,6 @@ export class MentalHealthApplication {
       updatedVersion,
       sessionProgress,
     };
-    // This contains all components needed to update the system state and generate a response
   }
 
   /**

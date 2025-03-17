@@ -31,6 +31,7 @@ export class GptResponseGenerator {
         maxTokens: 3000,
         presencePenalty: 0.6, // Encourage diverse responses
         frequencyPenalty: 0.2, // Reduce repetition
+        model: 'google/gemini-2.0-flash-exp:free',
       });
 
       // Parse the response and return structured therapeutic response
@@ -129,6 +130,7 @@ RESPONSE INSTRUCTIONS:
 6. Keep responses concise (2-4 sentences) and conversational
 7. The "content" field must be in ${userLanguage === 'en' ? 'English' : userLanguage} language as it will be shown to the user
 8. All other fields (insights, suggestedTechniques, etc.) must remain in English
+9. Use emoji when it is applicable
 
 Your response should be formatted as JSON:
 {
