@@ -3,10 +3,8 @@
 # Configuration
 BRANCH="main"
 CONTAINER_NAME="bot"
-INTERVAL=100  # Check every 300 seconds (5 minutes)
+INTERVAL=100
 
-# Move to repo directory
-cd "$REPO_PATH" || exit
 
 # Get the latest commit hash
 LAST_COMMIT=$(git rev-parse HEAD)
@@ -23,7 +21,7 @@ while true; do
         echo "New commit detected! Pulling changes..."
         
         # Pull latest changes
-        git pull "$BRANCH"
+        git pull
 
         # Restart the Docker container
         echo "Restarting container $CONTAINER_NAME..."
