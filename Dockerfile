@@ -5,10 +5,13 @@ WORKDIR /app
 # Copy package files and install dependencies
 COPY package*.json ./
 RUN npm ci
+RUN npm i -g prisma
 
 # Copy source code and build
 COPY tsconfig.json ./
 COPY src ./src
+COPY prisma ./prisma
+RUN prisma generate
 RUN npm run build
 
 # Production stage
@@ -18,10 +21,14 @@ WORKDIR /app
 
 # Copy package files and install production dependencies only
 COPY package*.json ./
+
 RUN npm ci --only=production
+RUN npm i -g prisma
 
 # Copy built files from builder stage
 COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/prisma ./prisma
+COPY --from=builder /app/node_modules/.prisma/client ./node_modules/.prisma/client
 
 # Copy environment configuration
 COPY .env* ./
@@ -36,4 +43,4 @@ RUN chown -R nodejs:nodejs /app
 USER nodejs
 
 # Start the application
-CMD ["node", "dist/application/index.js"]
+CMD ["npm", "run", "start"]

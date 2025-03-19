@@ -5,7 +5,7 @@
   "main": "dist/application/index.js",
   "scripts": {
     "build": "tsc",
-    "start": "node dist/application/index.js",
+    "start": "prisma migrate deploy && node dist/application/index.js",
     "dev": "ts-node-dev --respawn --transpile-only src/application/index.ts",
     "lint": "eslint 'src/**/*.{js,ts}'",
     "format": "prettier --write 'src/**/*.{js,ts}'",

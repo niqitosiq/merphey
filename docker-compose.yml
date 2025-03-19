@@ -3,7 +3,6 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: therapeutic-telegram-bot
     restart: unless-stopped
     env_file:
       - .env
@@ -12,11 +11,8 @@ services:
     environment:
       - NODE_ENV=production
       - TZ=UTC
-    networks:
-      - bot-network
   postgres:
     image: postgres:latest
-    container_name: therapy_db
     environment:
       POSTGRES_USER: admin
       POSTGRES_PASSWORD: secret
@@ -30,11 +26,6 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
-
-networks:
-  bot-network:
-    driver: bridge
-
 
 volumes:
   postgres_data:
