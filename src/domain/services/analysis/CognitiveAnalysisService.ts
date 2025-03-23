@@ -85,53 +85,45 @@ export class ContextAnalyzer {
         .map((msg) => `- ${msg.metadata?.breakthrough || msg.metadata?.challenge}`)
         .join('\n') || 'No specific insights recorded yet';
 
-    return `THERAPEUTIC MESSAGE ANALYSIS REQUEST
+    return `**THERAPEUTIC MESSAGE ANALYSIS REQUEST**
 
-MESSAGE TO ANALYZE: "${message.content}"
+**Message to Analyze:** "${message.content}"
 
-CONVERSATION CONTEXT:
+**Conversation Context:**  
 ${recentHistory || 'No conversation history available'}
 
-USER INSIGHTS:
+**User Insights:**  
 ${userInsights}
 
-THERAPEUTIC PLAN CONTEXT:
-- Focus Area: ${focus}
-- General Approach: ${approach}
+**Therapeutic Plan Context:**  
+- Focus Area: ${focus}  
+- General Approach: ${approach}  
 - Techniques: ${techniques}
 
-CURRENT GOALS:
+**Current Goals:**  
 ${goals}
- 
-ANALYSIS TASKS:
-1. Evaluate if any current goals have been reached based on the message
-2. Determine if the user's context has changed significantly, making the current plan incorrect
-3. Identify the most appropriate goal to focus on next
-  - It can be the same goal, if you think that it isn't reached
-  - Validate that this goal exists in the goals list
-4. Detect the language used by the user
-5. Determine if the therapeutic plan should be revised (shouldBeRevised) based on the following conditions:
-  - User reveals significant new information not accounted for in the current plan
-  - User expresses dissatisfaction with the current approach or techniques
-  - User demonstrates substantial progress that warrants advancing to more complex goals
-  - User shows resistance to the current therapeutic direction
-  - User mentions new symptoms, challenges, or life events that affect treatment priorities
-  - User's emotional state has changed dramatically (e.g., from stable to distressed)
-  - User explicitly requests a different approach or focus area
-  - Current goals appear to be inappropriate or ineffective based on user's responses
-  - User demonstrates cognitive or behavioral patterns that conflict with the current plan
-  - Therapeutic rapport seems to be deteriorating under the current approach
-  - The goal isn't applicable to current discussion
-  - You fill that user can't proceed with current goal
 
-INSTRUCTIONS FOR RESPONSE:
+**Analysis Tasks:**  
+1. Has the user achieved any of the current goals based on their message?  
+2. Has the user's context changed significantly, requiring a plan revision?  
+3. What should be the next goal to focus on?  
+4. What language is the user speaking?  
+5. Should the therapeutic plan be revised?
+
+**The plan should be revised if:**  
+- The user provides significant new information.  
+- The user expresses dissatisfaction with the current approach.  
+- The user's emotional state has changed dramatically.  
+- The current goals are no longer appropriate.
+
+**Instructions for Response:**  
 Return ONLY valid JSON in the following format without any additional text:
 
 {
-  "shouldBeRevised": true/false,  // Set true if any of the revision conditions are met
-  "nextGoal": "meaningful_identifier", // The identifier of the next step
+  "nextGoal": "meaningful_identifier",
   "language": "detected language code or name",
-  "reason": "Brief explanation of why the plan should/should not be revised"
+  "shouldBeRevised": true/false,
+  "reason": "Brief explanation"
 }`;
   }
 

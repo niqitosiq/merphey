@@ -105,52 +105,76 @@ export class LLMAdapter implements LlmPort {
    * @returns string - Generated text completion
    */
   async generateCompletion(prompt: string, options?: any): Promise<string> {
-    try {
-      // Add language instruction if specified in options
-      const languageInstruction =
-        options?.language && options.language !== 'en'
-          ? `Respond in ${options.language} language. `
-          : '';
+    const maxRetries = options?.maxRetries || 2;
+    let retries = 0;
 
-      const modifiedPrompt = languageInstruction + prompt;
+    while (true) {
+      try {
+        // Add language instruction if specified in options
+        const languageInstruction =
+          options?.language && options.language !== 'en'
+            ? `Respond in ${options.language} language. `
+            : '';
 
-      const response = await this.makeRequest('/chat/completions', {
-        model: options?.model || this.defaultModel,
-        messages: [
-          {
-            role: 'user',
-            content: modifiedPrompt,
-          },
-        ],
-        temperature: options?.temperature || 0.7,
-        max_tokens: options?.maxTokens || 2000,
-        response_format: { type: 'json_object' },
-      });
+        const modifiedPrompt = languageInstruction + prompt;
 
-      if (!response.choices?.[0]?.message?.content) {
-        throw new LlmServiceError('NO_COMPLETION', 'No completion generated');
+        const response = await this.makeRequest('/chat/completions', {
+          model: options?.model || this.defaultModel,
+          messages: [
+            {
+              role: 'user',
+              content: modifiedPrompt,
+            },
+          ],
+          temperature: options?.temperature || 0.5,
+          max_tokens: options?.maxTokens || 2000,
+          response_format: { type: 'json_object' },
+        });
+
+        // if (!response.choices?.[0]?.message?.content) {
+        //   throw new LlmServiceError('NO_COMPLETION', 'No completion generated');
+        // }
+
+        const content = response.choices[0].message.content
+          .replace(/```json\n/, '')
+          .replace(/```/, '')
+          .trim()
+          //remove all before first {
+          // and all after last }
+          .replace(/.*?({)/, '{')
+          .replace(/(})[^}]*$/, '}');
+
+        console.log(content, 'content');
+
+        // Validate if content is valid JSON
+        try {
+          JSON.parse(content);
+          return content;
+        } catch (parseError) {
+          console.warn(
+            `Failed to parse JSON response: ${parseError instanceof Error ? parseError.message : 'Unknown error'}`,
+          );
+
+          // If we've reached max retries, return the content anyway
+          if (retries >= maxRetries) {
+            console.warn(`Max retries (${maxRetries}) reached, returning unparsable content`);
+            return content;
+          }
+
+          // Otherwise, increment retries and try again
+          retries++;
+          console.info(`Retrying request (${retries}/${maxRetries})...`);
+          continue;
+        }
+      } catch (error: unknown) {
+        if (error instanceof LlmServiceError) {
+          throw error;
+        }
+        throw new LlmServiceError(
+          'COMPLETION_FAILED',
+          `Failed to generate completion: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        );
       }
-
-      const content = response.choices[0].message.content
-        .replace(/```json\n/, '')
-        .replace(/```/, '')
-        .trim()
-        //remove all before first {
-        // and all after last }
-        .replace(/.*?({)/, '{')
-        .replace(/(})[^}]*$/, '}');
-
-      console.log(content, 'content');
-
-      return content;
-    } catch (error: unknown) {
-      if (error instanceof LlmServiceError) {
-        throw error;
-      }
-      throw new LlmServiceError(
-        'COMPLETION_FAILED',
-        `Failed to generate completion: ${error instanceof Error ? error.message : 'Unknown error'}`,
-      );
     }
   }
 

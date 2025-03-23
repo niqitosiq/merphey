@@ -41,7 +41,7 @@ export class GptResponseGenerator {
 
       // Generate response with specific parameters for therapeutic context
       const completion = await this.openai.generateCompletion(prompt, {
-        temperature: 0.9,
+        temperature: 0.5,
         maxTokens: 3000,
         presencePenalty: 0.6, // Encourage diverse responses
         frequencyPenalty: 0.2, // Reduce repetition
@@ -157,6 +157,7 @@ RESPONSE INSTRUCTIONS:
 7. The "content" field must be in ${userLanguage === 'en' ? 'English' : userLanguage} language as it will be shown to the user
 8. All other fields (insights, suggestedTechniques, etc.) must remain in English
 9. Use emoji when it is applicable
+10. Use quotes only with \ (slash) to escape them
 
 Your response should be formatted as JSON:
 {

@@ -60,8 +60,8 @@ export class EmergencyResponseGenerator {
       const response = await this.openai.generateCompletion(prompt, {
         temperature: 0.3, // Lower temperature for more consistent crisis responses
         maxTokens: 1000,
-        presencePenalty: 0.0, // Stick to proven crisis intervention language
-        frequencyPenalty: 0.0,
+        // presencePenalty: 0.0, // Stick to proven crisis intervention language
+        // frequencyPenalty: 0.0,
       });
 
       // Parse the JSON response
