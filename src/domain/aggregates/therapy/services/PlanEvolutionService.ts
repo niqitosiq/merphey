@@ -108,78 +108,61 @@ export class PlanEvolutionService {
     const approach = planContent?.approach || 'No general approach defined';
     const focus = planContent?.focus || 'No specific focus area';
     // Build a comprehensive context section
-    const userContextSection = `
-USER CONTEXT INFORMATION:
-- User ID: ${contextUpdate.userId}
-- Current Conversation State: ${contextUpdate.currentState}
-- Risk Profile: ${JSON.stringify(userRiskProfile)}
-- Conversation History:
-${recentMessages.map((m) => `[${m.role}]: '${m.content}'`).join('\n')}
-[Latest User Message]: '${message.content}'
 
-
-KEY USER INSIGHTS:
-${
-  recentMessages
-    .filter((msg) => msg.metadata?.breakthrough || msg.metadata?.challenge)
-    .map((msg) => `- ${msg.metadata?.breakthrough || msg.metadata?.challenge}`)
-    .join('\n') || '- No specific insights recorded yet'
-}
-`;
+    const userInsights =
+      contextUpdate.history
+        ?.filter((msg) => msg.metadata?.breakthrough || msg.metadata?.challenge)
+        .map((msg) => `- ${msg.metadata?.breakthrough || msg.metadata?.challenge}`)
+        .join('\n') || 'No specific insights recorded yet';
 
     // Build instruction section with clear guidance on response format
-    return `THERAPEUTIC PLAN REVISION REQUEST
+    return `
+    **THERAPEUTIC PLAN REVISION REQUEST**
 
-${userContextSection}
+**Key User Context:**  
+- Current State: ${contextUpdate.currentState}  
+- Recent Messages:  
+${recentMessages.map((m) => `[${m.role}]: '${m.content}'`).join('\n')}  
+- Key Insights: ${userInsights || 'No specific insights recorded yet'}  
+- Risk Profile: ${JSON.stringify(userRiskProfile)}
 
-THERAPEUTIC PLAN CONTEXT:
-- Focus Area: ${focus}
-- General Approach: ${approach}
+**Therapeutic Plan Context:**  
+- Focus Area: ${focus}  
+- General Approach: ${approach}  
 - Techniques: ${techniques}
 
-CURRENT GOALS:
+**Current Goals:**  
 ${currentGoals.map((goal) => `- [${goal.state}] ${goal.content} (Approach: ${goal.approach})`).join('\n') || 'No goals currently defined'}
 
-CURRENT TECHNIQUES:
-${currentTechniques.map((tech) => `- ${tech}`).join('\n') || 'No techniques currently defined'}
+**Instructions for Response:**  
+1. Analyze the user's current state and recent messages.  
+2. Update the therapeutic plan to address immediate needs and long-term progress.  
+3. Ensure the plan is tailored to the user's context and history.  
+4. Provide clear, actionable goals with specific approaches.
+5. Don't use double quotes inside the json strings.
 
-INSTRUCTIONS FOR RESPONSE:
-1. Analyze the user's history and current state
-2. Update the therapeutic plan to address the user's immediate needs and long-term progress
-3. Include detailed guidance on how to respond to the user in the 'approach' field
-4. Ensure all user context is preserved in the plan for future responses
-5. Be specific about therapeutic techniques to apply in conversations
+**Goals Guidelines:**  
+- Each goal should be clear and actionable.  
+- Goals should be tailored to the user's current state and needs.  
+- Goals should build on the user's progress and history.
 
-
-GOALS RULES:
-- Each goal must have exactly one clear, actionable item (single responsibility principle)
-- Every goal must be associated with a specific conversation state (INFO_GATHERING, ACTIVE_GUIDANCE, etc.)
-- Goals should be measurable with clear completion criteria
-- Include meaningful, unique codenames for each goal for easy reference
-- Goals must have detailed approach instructions for the AI to follow
-- Order goals in a logical therapeutic progression
-- Include specific techniques relevant to each goal
-- Goals should be responsive to user's current emotional and cognitive state
-- Consider risk levels when formulating goals
-- Goals should build on user's progress and history
-- Don't repeat goals from latest plan if it is not required
-
-return format: {
+**Return Format:**
+{
   "goals": [
-    { 
-      "codename": "", // unique meaningful identifier
-      "state": "${Object.keys(ConversationState).join('/')}", 
-      "content": "", // The goal description
-      "approach": "DETAILED instructions on how to respond to the user regarding this goal, including tone, style, specific questions to ask, and how to incorporate user's history and context"
+    {
+      "codename": "unique_identifier",
+      "state": "INFO_GATHERING/ACTIVE_GUIDANCE/etc.",
+      "content": "Goal description",
+      "approach": "Detailed instructions for responding to the user"
     }
   ],
-  "techniques": ["list of specific therapeutic techniques to use"],
-  "approach": "Overall conversation approach including detailed instructions for responding to the user that preserves and uses ALL relevant user context",
-  "focus": "Current therapeutic focus area",
-  "riskFactors": ["Any identified risk factors to monitor"],
+  "techniques": ["list of techniques"],
+  "approach": "Overall conversation approach",
+  "focus": "Current therapeutic focus",
+  "riskFactors": ["identified risk factors"],
   "metrics": {
-    "completedGoals": ["goals that have been achieved"],
-    "progress": "assessment of overall progress"
+    "completedGoals": ["achieved goals"],
+    "progress": "assessment of progress"
   }
 }`;
   }

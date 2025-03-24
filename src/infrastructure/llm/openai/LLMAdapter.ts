@@ -105,7 +105,7 @@ export class LLMAdapter implements LlmPort {
    * @returns string - Generated text completion
    */
   async generateCompletion(prompt: string, options?: any): Promise<string> {
-    const maxRetries = options?.maxRetries || 2;
+    const maxRetries = options?.maxRetries || 5;
     let retries = 0;
 
     while (true) {

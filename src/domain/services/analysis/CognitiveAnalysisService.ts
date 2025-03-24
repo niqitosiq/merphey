@@ -112,13 +112,13 @@ ${goals}
 
 **The plan should be revised if:**  
 - The user provides significant new information.  
-- The user expresses dissatisfaction with the current approach.  
+- The user expresses dissatisfaction with the current approach (e.g., frustration or calling the AI unhelpful).  
 - The user's emotional state has changed dramatically.  
-- The current goals are no longer appropriate.
+- The current goals are no longer appropriate.  
+- **The user explicitly requests a deeper analysis of their behavior, emotions, or motivations (e.g., "why did I do this?").**
 
 **Instructions for Response:**  
 Return ONLY valid JSON in the following format without any additional text:
-
 {
   "nextGoal": "meaningful_identifier",
   "language": "detected language code or name",
