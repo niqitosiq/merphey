@@ -68,6 +68,9 @@ export const buildPlanRevisionPrompt = ({
 - Current State: ${contextUpdate.currentState}  
 - Recent Messages:  
 ${mapMessagesToString(recentMessages)}  
+- Latest Message from user:
+${message.content};
+
 - Key Insights: ${userInsights}  
 - Risk Profile: ${JSON.stringify(userRiskProfile)}
 
