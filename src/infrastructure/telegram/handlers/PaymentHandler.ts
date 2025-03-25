@@ -5,7 +5,7 @@ import { EventBus } from '../../../shared/events/EventBus';
 import { EventTypes } from '../../../shared/events/EventTypes';
 
 export class PaymentHandler {
-  private readonly MAX_CREDITS_PER_TRANSACTION = 10;
+  private readonly MAX_CREDITS_PER_TRANSACTION = 1;
   private readonly STARS_PER_CREDIT = 150; // 150 Telegram Stars = 1 credit
 
   constructor(
@@ -123,14 +123,8 @@ export class PaymentHandler {
         'Приобретите кредиты для продолжения общения с помощником. 150 звёзд = 1 кредит', // description
         `add_credits_${Date.now()}`, // payload
         process.env.TELEGRAM_PAYMENT_TOKEN || '', // provider_token
-        'TG_STARS', // Using Telegram Stars as currency
-        [{ label: '1 Кредит', amount: this.STARS_PER_CREDIT }], // 150 stars = 1 credit
-        {
-          photo_url: 'https://example.com/payment.jpg',
-          photo_width: 600,
-          photo_height: 400,
-          start_parameter: 'add_credits',
-        },
+        'XTR', // Using Telegram Stars as currency
+        [{ label: '1 Кредит', amount: this.STARS_PER_CREDIT }],
       );
 
       await this.bot.sendMessage(
@@ -159,25 +153,26 @@ export class PaymentHandler {
         });
       }
 
+      console.log(
+        JSON.stringify([
+          chatId,
+          'Пополнение Баланса',
+          'Выберите количество кредитов для пополнения. 150 звёзд = 1 кредит.',
+          `add_credits_${Date.now()}`,
+          process.env.TELEGRAM_PAYMENT_TOKEN || '',
+          'XTR',
+          prices,
+        ]),
+      );
+
       await this.bot.sendInvoice(
         chatId,
         'Пополнение Баланса',
         'Выберите количество кредитов для пополнения. 150 звёзд = 1 кредит.',
         `add_credits_${Date.now()}`,
         process.env.TELEGRAM_PAYMENT_TOKEN || '',
-        'TG_STARS',
+        'XTR',
         prices,
-        {
-          photo_url: 'https://example.com/payment.jpg',
-          photo_width: 600,
-          photo_height: 400,
-          start_parameter: 'add_credits',
-          need_name: false,
-          need_phone_number: false,
-          need_email: false,
-          need_shipping_address: false,
-          is_flexible: false,
-        },
       );
     } catch (error) {
       console.error('Error creating payment configuration:', error);
