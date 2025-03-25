@@ -20,6 +20,7 @@ import {
 import { Message } from '../domain/aggregates/conversation/entities/Message';
 import { EventBus } from 'src/shared/events/EventBus';
 import { TherapistService } from 'src/domain/services/analysis/TherapistService';
+import { User } from 'src/domain/aggregates/user/entities/User';
 
 /**
  * Main application class that orchestrates the mental health chatbot workflow
@@ -197,13 +198,15 @@ export class MentalHealthApplication {
    * @param userId - The user identifier
    * @returns Promise<void>
    */
-  async startSession(userId: string): Promise<void> {
+  async startSession(userId: string) {
     try {
-      // Create initial conversation context if it doesn't exist
-      // const existingContext = await this.conversationService.getConversationContext(userId);
-      // if (!existingContext) {
-      //   // await this.conversationService.initializeConversationContext(userId);
-      // }
+      try {
+        const user = await this.conversationService.getUserById(userId);
+        return user;
+      } catch (error: any) {
+        const user = await this.conversationService.createUser();
+        return user;
+      }
     } catch (error: any) {
       this.errorHandler.handleProcessingError(error, userId);
     }

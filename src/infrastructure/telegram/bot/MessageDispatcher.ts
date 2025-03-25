@@ -41,6 +41,13 @@ export class MessageDispatcher {
       // Check if message is a command
       if (msg.text?.startsWith('/')) {
         const command = msg.text.substring(1).split(' ')[0];
+        
+        // Handle payment command separately
+        if (command === 'buy') {
+          await this.paymentHandler.handlePaymentConfiguration(msg.chat.id);
+          return;
+        }
+
         const response = await this.commandHandler.handleCommand(userId, command);
         await this.bot.sendMessage(msg.chat.id, response);
         return;

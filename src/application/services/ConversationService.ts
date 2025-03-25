@@ -12,6 +12,7 @@ import { ApplicationError } from '../../shared/errors/application-errors';
 import { Message } from '@prisma/client';
 import { UserRepository } from 'src/infrastructure/persistence/postgres/UserRepository';
 import { PlanEvolutionService } from 'src/domain/services/analysis/PlanEvolutionService';
+import { User } from 'src/domain/aggregates/user/entities/User';
 
 /**
  * Application service responsible for managing conversation lifecycle
@@ -29,12 +30,34 @@ export class ConversationService {
     return `msg_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
   }
 
+  async getUserById(userId: string): Promise<User | null> {
+    try {
+      const user = await this.userRepository.findById(userId);
+      return user;
+    } catch (error) {
+      throw new ApplicationError(
+        'Failed to retrieve user',
+        `User ID: ${userId}; Original error: ${error}`,
+        'HIGH',
+      );
+    }
+  }
+
+  async createUser(): Promise<User> {
+    try {
+      const newUser = await this.userRepository.createUser();
+      return newUser;
+    } catch (error) {
+      throw new ApplicationError('Failed to create user', `Original error: ${error}`, 'HIGH');
+    }
+  }
+
   async initializeConversationContext(userId: string): Promise<ConversationContext> {
     try {
       let user = await this.userRepository.findById(userId);
 
       if (!user) {
-        user = await this.userRepository.createUser(userId);
+        user = await this.userRepository.createUser();
       }
 
       console.log(user, 'user');
