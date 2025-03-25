@@ -1,7 +1,7 @@
-import { ConversationContext } from 'src/domain/aggregates/conversation/entities/types';
-import { Message } from 'src/domain/aggregates/conversation/entities/Message';
-import { PlanVersion } from 'src/domain/aggregates/therapy/entities/PlanVersion';
-import { ConversationState } from 'src/domain/shared/enums';
+import { ConversationContext } from '../../../../domain/aggregates/conversation/entities/types';
+import { Message } from '../../../../domain/aggregates/conversation/entities/Message';
+import { PlanVersion } from '../../../../domain/aggregates/therapy/entities/PlanVersion';
+import { ConversationState } from '../../../../domain/shared/enums';
 import { AnalysisResult } from '../CognitiveAnalysisService';
 
 interface TherapeuticResponsePromptData {
@@ -99,8 +99,6 @@ ${
     : 'No specific therapeutic plan available - use general supportive approach'
 }
 
-THERAPEUTIC GUIDELINES:
-${getStateSpecificGuidelines(context.currentState)}
 
 RESPONSE INSTRUCTIONS:
 1. Respond with empathy and authenticity

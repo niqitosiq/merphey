@@ -40,7 +40,8 @@ export const buildCognitiveAnalysisPrompt = ({
 
   return `**THERAPEUTIC MESSAGE ANALYSIS REQUEST**
 
-**Message to Analyze:** "${message.content}"
+  **Message to Analyze:**  
+"${message.content}"
 
 **Conversation Context:**  
 ${recentHistory}
@@ -49,33 +50,44 @@ ${recentHistory}
 ${userInsights}
 
 **Therapeutic Plan Context:**  
-- Focus Area: ${focus}  
-- General Approach: ${approach}  
-- Techniques: ${techniques}
+- **Focus Area:** ${focus}  
+- **General Approach:** ${approach}  
+- **Techniques:** ${techniques}
 
 **Current Goals:**  
 ${goals}
 
 **Analysis Tasks:**  
-1. Has the user achieved any of the current goals based on their message?  
-2. Has the user's context changed significantly, requiring a plan revision?  
-3. What should be the next goal to focus on?  
-4. What language is the user speaking?  
-5. Should the therapeutic plan be revised?
+1. Assess if the user has achieved any current goals based on their message.  
+2. Evaluate if the user's context or emotional state has shifted significantly.  
+3. Identify the next logical goal based on progress or emerging needs.  
+4. Detect the language of the user's message.  
+5. Determine if the therapeutic plan requires revision.
 
-**The plan should be revised if:**  
-- The user provides significant new information.  
-- The user expresses dissatisfaction with the current approach (e.g., frustration or calling the AI unhelpful).  
-- The user's emotional state has changed dramatically.  
-- The current goals are no longer appropriate.  
-- **The user explicitly requests a deeper analysis of their behavior, emotions, or motivations (e.g., "why did I do this?").**
+**Plan Revision Criteria:**  
+The therapeutic plan should be revised if:  
+- A major goal is achieved.  
+- Significant new information is provided by the user.  
+- The user's emotional state changes dramatically.  
+- The user expresses dissatisfaction with the approach (e.g., frustration or calling the AI unhelpful).  
+- Current goals become irrelevant or misaligned.  
+- The user requests deeper exploration of behavior, emotions, or motivations (e.g., "Why did I do this?").
 
-**Instructions for Response:**  
-Return ONLY valid JSON in the following format without any additional text:
+
+**Response Format:**  
+Return only valid JSON:  
 {
   "nextGoal": "meaningful_identifier",
   "language": "detected language code or name",
   "shouldBeRevised": true/false,
   "reason": "Brief explanation"
-}`;
+}
+
+**Guidelines:**  
+- **Goal Achievement:** If a goal is met, set "nextGoal" to the next logical step in the therapeutic plan.  
+- **Context Shift:** If the context changes but no goal is achieved, set "shouldBeRevised" to "true" with a clear reason.  
+- **Progress Tracking:** If the user is on track, set "shouldBeRevised" to "false" and retain the current goal.  
+- **Language Detection:** Use standard language codes (e.g., "en" for English, "es" for Spanish).  
+- **Reason Field:** Keep explanations concise yet sufficient for therapist understanding.
+`;
 };

@@ -30,7 +30,10 @@ export const mapGoalsToString = (planContent: PlanContent | undefined): string =
   if (!planContent?.goals) return 'No goals currently defined';
 
   return planContent.goals
-    .map((g) => `[${g.state}]: ${g.content}\nApproach: ${g.approach}; Identifier: "${g.codename}"`)
+    .map(
+      (g) =>
+        `[${g.state}]: Conditions: ${g.conditions}; \n ${g.content} \nApproach: ${g.approach}; Identifier: "${g.codename}"`,
+    )
     .join('\n\n');
 };
 
@@ -63,64 +66,79 @@ export const buildPlanRevisionPrompt = ({
   const focus = planContent?.focus || 'No specific focus area';
 
   return `**THERAPEUTIC PLAN REVISION REQUEST**
+  #### **Key User Context:**
+- **Current State:** ${contextUpdate.currentState}  
+- **Recent Messages:**  
+  ${mapMessagesToString(recentMessages)}  
+- **Latest Message from User:**  
+  ${message.content}  
+- **Key Insights:** ${userInsights}  
+- **Risk Profile:** ${JSON.stringify(userRiskProfile)}  
 
-**Key User Context:**  
-- Current State: ${contextUpdate.currentState}  
-- Recent Messages:  
-${mapMessagesToString(recentMessages)}  
-- Latest Message from user:  
-${message.content};  
-- Key Insights: ${userInsights}  
-- Risk Profile: ${JSON.stringify(userRiskProfile)}  
+#### **Therapeutic Plan Context:**
+- **Focus Area:** ${focus}  
+- **General Approach:** ${approach}  
+- **Techniques:** ${techniques}  
 
-**Therapeutic Plan Context:**  
-- Focus Area: ${focus}  
-- General Approach: ${approach}  
-- Techniques: ${techniques}  
-
-**Current Goals:**  
+#### **Current Goals:**
 ${mapCurrentGoalsToString(currentGoals)}  
 
-**Instructions for Response:**  
-1. Analyze the user's current state, recent messages, and insights to understand their immediate needs and long-term progress.  
-2. Update the therapeutic plan to be flexible and adaptive, accounting for potential deviations in the user's responses and state.  
-3. Define clear conditions for each goal to determine when it should be activated based on the user's input and behavior.  
-4. Ensure the plan includes alternative goals or branching paths to cover different possible scenarios.  
-5. Base the therapeutic approach, techniques, and goals on evidence-based practices and established psychological theories.  
-6. Provide specific, actionable goals with detailed approaches for responding to the user.  
-7. Include metrics for assessing progress using standardized tools or observable outcomes.  
-8. Do not use double quotes inside the JSON strings.  
+---
 
-**Goals Guidelines:**  
-- Each goal should have well-defined conditions that trigger its activation.  
-- Conditions should be based on user statements, behaviors, or emotional states, and can use logical operators (AND, OR, NOT).  
-- Goals should be clear, actionable, and tailored to the user's current state and history.  
-- Include alternative goals to account for different user responses or needs.  
-- Ensure there is a default or fallback goal if specific conditions are not met.  
+### **Instructions for Response:**
+1. Analyze the user's current state and recent messages to identify their immediate needs and long-term progress.  
+2. Update the therapeutic plan to address these needs, ensuring it is tailored to the user's context and history.  
+3. Define clear, actionable goals, each focusing on **a single, specific therapeutic action or intervention**.  
+   - **Important:** Each goal should represent **one discrete step or technique**. Do not include multiple actions or a sequence of steps within a single goal. If a therapeutic intervention involves multiple steps, break it down into separate goals, each with their own conditions and approaches.  
+4. Use the "conditions" field to specify when each goal should be activated. Conditions can be based on:  
+   - User's emotional state (e.g., "user expresses anxiety")  
+   - Specific user statements or keywords (e.g., "user says 'не знаю' more than twice")  
+   - Completion of previous goals (e.g., "after completing timeline_analysis_v2")  
+5. Ensure that the goals form a logical progression or tree, where the outcome of one goal can influence the activation of subsequent goals.  
+6. Provide a detailed approach for each goal, describing how to implement the specific therapeutic action or intervention.  
+7. Include a variety of techniques and approaches to address different aspects of the user's needs.  
+8. Consider the user's risk profile and any identified risk factors when formulating goals and approaches.  
+9. Use evidence-based therapeutic techniques and ensure that the plan aligns with established psychological principles.  
+10. Do not use double quotes inside the JSON strings.  
 
-**Evidence-Based Requirements:**  
-- Align the therapeutic approach and techniques with proven psychological practices (e.g., Cognitive Behavioral Therapy (CBT), Dialectical Behavior Therapy (DBT), etc.).  
-- Reference specific interventions or models that are effective for the user's condition.  
-- Use standardized assessment tools or scales to measure progress where applicable (e.g., PHQ-9 for depression, GAD-7 for anxiety).  
+---
 
-**Return Format:**  
+### **Goals Guidelines:**
+- Each goal should have a clear, specific purpose and focus on **one therapeutic action**.  
+- Conditions should be precise and based on observable user behaviors or statements.  
+- The approach should provide concrete instructions for implementing the therapeutic action.  
+- Goals should be adaptable to the user's responses and progress.  
+
+#### **Example of a Well-Structured Goal:**
+{
+  "conditions": "user mentions feeling overwhelmed OR user describes a recent panic attack",
+  "codename": "grounding_technique",
+  "state": "ACTIVE_GUIDANCE",
+  "content": "Introduce a grounding exercise to manage acute anxiety",
+  "approach": "Guide the user through a 5-4-3-2-1 grounding technique: Ask them to name 5 things they can see, 4 things they can touch, 3 things they can hear, 2 things they can smell, and 1 thing they can taste. Encourage them to focus on their senses to anchor themselves in the present moment."
+}
+This example demonstrates a single, focused goal with a clear condition and a specific therapeutic action.
+
+---
+
+### **Return Format:**
 {
   "goals": [
     {
-      "conditions": "Specific conditions for activating this goal (e.g., user expresses anxiety OR user mentions sleeplessness)",
+      "conditions": "Specific conditions for activating this goal",
       "codename": "unique_identifier",
       "state": "INFO_GATHERING/ACTIVE_GUIDANCE/etc.",
       "content": "Goal description",
-      "approach": "Detailed instructions for responding to the user, based on evidence-based practices"
+      "approach": "Detailed instructions for a single therapeutic action"
     }
   ],
-  "techniques": ["list of evidence-based techniques"],
-  "approach": "Overall conversation approach, grounded in psychological theory",
-  "focus": "Current therapeutic focus, aligned with user's needs",
+  "techniques": ["list of techniques"],
+  "approach": "Overall conversation approach",
+  "focus": "Current therapeutic focus",
   "riskFactors": ["identified risk factors"],
   "metrics": {
     "completedGoals": ["achieved goals"],
-    "progress": "Assessment of progress using standardized measures or observable outcomes"
+    "progress": "assessment of progress"
   }
 }`;
 };

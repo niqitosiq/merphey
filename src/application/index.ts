@@ -18,7 +18,7 @@ import { ErrorHandler } from '../shared/errors/application-errors';
 import { RiskModel } from '../domain/services/risk/RiskModel';
 import { UserRepository } from '../infrastructure/persistence/postgres/UserRepository';
 import { EventBus } from '../shared/events/EventBus';
-import { TherapistService } from 'src/domain/services/analysis/TherapistService';
+import { TherapistService } from '../domain/services/analysis/TherapistService';
 
 async function bootstrap() {
   try {

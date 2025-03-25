@@ -311,20 +311,14 @@ export class ConversationService {
   }
 
   /**
-   * Resets the conversation state for a user
+   * Resets the conversation state for a user by creating a new conversation
    * @param userId - The user identifier
    * @returns Promise<void>
    */
   async resetConversationState(userId: string): Promise<void> {
     try {
-      const existingConversation = await this.conversationRepository.findLatestByUserId(userId);
-
-      if (existingConversation) {
-        await this.conversationRepository.updateState(
-          existingConversation.id,
-          ConversationState.INFO_GATHERING,
-        );
-      }
+      // Create a new conversation context which will also create a new therapeutic plan
+      await this.initializeConversationContext(userId);
     } catch (error) {
       throw new ApplicationError(
         'Failed to reset conversation state',
