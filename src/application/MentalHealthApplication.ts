@@ -152,8 +152,6 @@ export class MentalHealthApplication {
         message,
       );
 
-      console.log('therapeuticResponse', therapeuticResponse.content);
-
       const sessionProgress = this.progressTracker.calculateSessionMetrics(
         context.history,
         therapeuticResponse,

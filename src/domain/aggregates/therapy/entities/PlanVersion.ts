@@ -6,6 +6,7 @@ export type Goal = {
   state: ConversationState;
   content: string;
   approach: string;
+  conditions: string;
 };
 
 export interface PlanContent {

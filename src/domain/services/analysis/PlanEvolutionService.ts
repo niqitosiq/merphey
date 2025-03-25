@@ -19,6 +19,7 @@ export class PlanEvolutionService {
           state: 'INFO_GATHERING',
           content: 'greet user, get to know the person better',
           approach: 'establish contact, find out why user came',
+          conditions: 'if conversation started',
         },
       ],
       approach: 'open-ended questions',
