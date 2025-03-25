@@ -1,10 +1,14 @@
-// filepath: /Users/niqitosiq/pets/psychobot/src/infrastructure/telegram/bot/TelegramBot.ts
 import { MessageDispatcher } from './MessageDispatcher';
+import TelegramBotLib from 'node-telegram-bot-api';
 import { TextMessageHandler } from '../handlers/TextMessageHandler';
 import { CommandHandler } from '../handlers/CommandHandler';
 import { MentalHealthApplication } from '../../../application/MentalHealthApplication';
 import dotenv from 'dotenv';
-import { EventBus } from 'src/shared/events/EventBus';
+import { EventBus } from '../../../shared/events/EventBus';
+import { PaymentHandler } from '../handlers/PaymentHandler';
+import { PaymentService } from '../../../domain/services/payment/PaymentService';
+import { UserRepository } from '../../../infrastructure/persistence/postgres/UserRepository';
+import { PaymentRepository } from '../../../infrastructure/persistence/postgres/PaymentRepository';
 
 /**
  * Main Telegram bot class that bootstraps the bot functionality
@@ -19,7 +23,8 @@ export class TelegramBot {
    */
   constructor(
     private readonly application: MentalHealthApplication,
-
+    private readonly paymentService: PaymentService,
+    private readonly userRepository: UserRepository,
     private readonly eventBus: EventBus,
   ) {
     // Load environment variables
@@ -35,13 +40,15 @@ export class TelegramBot {
     const textMessageHandler = new TextMessageHandler(application);
     const commandHandler = new CommandHandler(application);
 
+    const bot = new TelegramBotLib(token, { polling: true });
+    const paymentHandler = new PaymentHandler(bot, this.paymentService, userRepository, eventBus);
+
     // Create message dispatcher
     this.messageDispatcher = new MessageDispatcher(
       textMessageHandler,
       commandHandler,
-      application,
-      token,
-      this.eventBus,
+      paymentHandler,
+      bot,
     );
 
     console.log('Telegram bot initialized and ready to handle messages');
@@ -64,10 +71,12 @@ export class TelegramBot {
 export function startTelegramBot(
   application: MentalHealthApplication,
   eventBus: EventBus,
+  paymentService: PaymentService,
+  userRepository: UserRepository,
 ): TelegramBot {
   try {
     console.log('Starting Telegram bot...');
-    const bot = new TelegramBot(application, eventBus);
+    const bot = new TelegramBot(application, paymentService, userRepository, eventBus);
     console.log('Telegram bot started successfully');
     return bot;
   } catch (error) {

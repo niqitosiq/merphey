@@ -19,6 +19,8 @@ import { RiskModel } from '../domain/services/risk/RiskModel';
 import { UserRepository } from '../infrastructure/persistence/postgres/UserRepository';
 import { EventBus } from '../shared/events/EventBus';
 import { TherapistService } from '../domain/services/analysis/TherapistService';
+import { PaymentService } from '../domain/services/payment/PaymentService';
+import { PaymentRepository } from '../infrastructure/persistence/postgres/PaymentRepository';
 
 async function bootstrap() {
   try {
@@ -33,7 +35,7 @@ async function bootstrap() {
     // Initialize repositories
     const conversationRepository = new ConversationRepository();
     const therapeuticPlanRepository = new TherapeuticPlanRepository();
-    const userRepository = new UserRepository();
+    const userRepository = new UserRepository(prisma);
 
     // Initialize domain services
     const messageValidator = new MessageValidator();
@@ -72,8 +74,10 @@ async function bootstrap() {
       eventBus,
     );
 
+    const paymentRepository = new PaymentService(new PaymentRepository(prisma), eventBus);
+
     // Initialize and start Telegram bot
-    const bot = startTelegramBot(application, eventBus);
+    const bot = startTelegramBot(application, eventBus, paymentRepository, userRepository);
 
     console.log('PsychoBot is running! 🤖');
   } catch (error) {
