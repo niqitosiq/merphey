@@ -4,38 +4,45 @@ import { User } from '../../aggregates/user/entities/User';
 import { SessionStatus } from '../../shared/enums';
 import { EventBus } from '../../../shared/events/EventBus';
 import { EventTypes } from '../../../shared/events/EventTypes';
+import { UserRepository } from '../../../infrastructure/persistence/postgres/UserRepository';
 
 export class SessionService {
   constructor(
     private sessionRepository: SessionRepository,
+    private userRepository: UserRepository,
     private eventBus: EventBus,
   ) {}
 
-  async startSession(user: User, duration: number = 30): Promise<Session> {
+  async startSession(userId: User['id'], duration: number = 30): Promise<Session> {
+    const user = await this.userRepository.findById(userId);
+    if (!user) {
+      throw new Error(`User with ID ${userId} not found`);
+    }
     // Check if user has enough balance
     if (!user.hasEnoughBalanceForSession) {
       throw new Error('Insufficient balance to start a session');
     }
 
     // Check if user already has an active session
-    const activeSession = await this.sessionRepository.findActiveByUserId(user.id);
+    const activeSession = await this.sessionRepository.findActiveByUserId(userId);
     if (activeSession) {
-      throw new Error('User already has an active session');
+      return activeSession;
     }
 
     // Deduct session cost from user's balance
+    const session = await this.sessionRepository.create(userId, duration);
     user.deductSessionCost();
+    this.userRepository.decrementBalance(userId, 1);
 
     // Create new session
-    const session = await this.sessionRepository.create(user.id, duration);
 
     // publish session started event
-    this.eventBus.publish(EventTypes.SESSION_STARTED, {
-      sessionId: session.id,
-      userId: user.id,
-      startTime: session.startTime,
-      duration: session.duration,
-    });
+    // this.eventBus.publish(EventTypes.SESSION_STARTED, {
+    //   sessionId: session.id,
+    //   userId: user.id,
+    //   startTime: session.startTime,
+    //   duration: session.duration,
+    // });
 
     return session;
   }

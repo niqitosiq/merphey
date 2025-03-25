@@ -12,10 +12,12 @@ export class UserRepository {
     return user ? this.mapToDomainModel(user) : null;
   }
 
-  async createUser(): Promise<User> {
+  async createUser(telegramId: string): Promise<User> {
     const user = await this.prisma.user.create({
       data: {
+        id: telegramId,
         balance: 1, // Default balance for one free session
+        telegramId,
       },
     });
 

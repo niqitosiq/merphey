@@ -68,11 +68,11 @@ export class CommandHandler {
    */
   private async handleStartCommand(userId: string): Promise<string> {
     // Create user session if it doesn't exist
-    const user = await this.application.startSession(userId);
+    const info = await this.application.getUserInfo(userId);
+    // const session = await this.application.startSession(userId);
 
     // Get user's current balance and active session info
-    const userInfo = await this.application.getUserInfo(userId);
-    const activeSession = userInfo?.conversation ? 'активная' : 'нет активных';
+    const activeSession = info?.conversation ? 'активная' : 'нет активных';
 
     return `Добро пожаловать в PsychoBot! 🌿\n\n
 Я здесь, чтобы поддержать ваше психическое здоровье через терапевтические беседы. Я могу помочь с:\n
@@ -80,7 +80,7 @@ export class CommandHandler {
 - Развитием стратегий совладания
 - Предоставлением терапевтических техник
 - Предложением ресурсов при необходимости\n
-💫 Ваш текущий баланс: ${user?.balance} кредит(ов)
+💫 Ваш текущий баланс: ${info?.user?.balance} кредит(ов)
 🕒 Статус сессии: ${activeSession}\n
 📝 Каждая сессия длится 30 минут и стоит 1 кредит
 ⭐️ Используйте команду /buy чтобы пополнить баланс (150 звёзд = 1 кредит)\n
@@ -123,7 +123,7 @@ export class CommandHandler {
       let response = '*Информация о вашей терапевтической сессии* 📊\n\n';
 
       // Conversation state
-      response += `*Текущее состояние*: ${this.formatConversationState(userInfo.conversation.state)}\n\n`;
+      // response += `*Текущее состояние*: ${this.formatConversationState(userInfo.conversation.state)}\n\n`;
 
       // Session statistics
       response += '*Статистика сессии*:\n';
@@ -133,8 +133,11 @@ export class CommandHandler {
       // Current plan information
       if (userInfo.plan) {
         response += '\n*Текущий терапевтический план*:\n';
-        response += `- Область фокуса: ${userInfo.plan.currentVersion?.content}\n`;
+        response += `- Область фокуса: ${userInfo.plan.currentVersion?.content.focus}\n`;
       }
+
+      response += `*Информация о пользователе*:\n`;
+      response += `- Баланс: ${userInfo.user?.balance} кредит(ов)\n`;
 
       response += '\nПродолжите нашу беседу в любое время, просто написав сообщение.';
 

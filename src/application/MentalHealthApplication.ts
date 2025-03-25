@@ -1,3 +1,5 @@
+import { ConversationState, RiskLevel } from '../domain/shared/enums';
+import { SessionService } from '../domain/services/session/SessionService';
 import { ConversationService } from './services/ConversationService';
 import { MessageValidator } from '../shared/utils/safety-filter';
 import { MessageFactory } from '../domain/aggregates/conversation/entities/MessageFactory';
@@ -40,6 +42,7 @@ export class MentalHealthApplication {
     private responseComposer: ResponseComposer,
     private errorHandler: ErrorHandler,
     private eventBus: EventBus,
+    private sessionService: SessionService,
   ) {}
 
   /**
@@ -50,15 +53,20 @@ export class MentalHealthApplication {
    */
   async handleMessage(userId: string, message: string): Promise<SessionResponse> {
     try {
-      // 1. Retrieve conversation context
+      // 3. Retrieve conversation context
       const context = await this.conversationService.getConversationContext(userId);
 
-      // 2. Validate and preprocess input
+      if (!context) {
+        // If no context is found, create a new one
+        throw new Error('No conversation context found for user.');
+      }
+
+      // 4. Validate and preprocess input
       // This will sanitize the message and check for inappropriate content
       const sanitizedMessage = this.messageValidator.validateInput(message);
       // It will also normalize text formatting and handle special characters
 
-      // 3. Create message entity
+      // 5. Create message entity
       // Creates a domain entity from the raw message text
       const Message = this.messageFactory.createMessage({
         content: sanitizedMessage,
@@ -68,12 +76,12 @@ export class MentalHealthApplication {
       });
       // Includes metadata about the context and conversation state
 
-      // 4. Core processing pipeline
+      // 6. Core processing pipeline
       // This processes the message through multiple analysis stages
       const processingResult = await this.processMessagePipeline(context, Message);
       // See processMessagePipeline method for details
 
-      // 5. Update conversation state
+      // 7. Update conversation state
       // Persists the new message and any state changes to the database
       const updatedContext = await this.conversationService.persistConversationFlow(
         context,
@@ -82,7 +90,7 @@ export class MentalHealthApplication {
       );
       // Updates the conversation context with new risk assessments and insights
 
-      // 6. Prepare response
+      // 8. Prepare response
       // Creates the final response package to be sent back to the user
       return this.responseComposer.createResponsePackage(processingResult, updatedContext);
       // Includes therapeutic message, metadata, and progress metrics
@@ -194,32 +202,20 @@ export class MentalHealthApplication {
   }
 
   /**
-   * Starts a new therapy session for a user
-   * @param userId - The user identifier
-   * @returns Promise<void>
-   */
-  async startSession(userId: string) {
-    try {
-      try {
-        const user = await this.conversationService.getUserById(userId);
-        return user;
-      } catch (error: any) {
-        const user = await this.conversationService.createUser();
-        return user;
-      }
-    } catch (error: any) {
-      this.errorHandler.handleProcessingError(error, userId);
-    }
-  }
-
-  /**
    * Retrieves user session information including conversation state and progress
    * @param userId - The user identifier
    * @returns Promise<UserInfo> - User session information
    */
   async getUserInfo(userId: string) {
     try {
+      const user = await this.conversationService.getUserById(userId);
+
+      if (!user) {
+        await this.conversationService.createUser(userId);
+      }
+
       const context = await this.conversationService.getConversationContext(userId);
+
       if (!context) {
         return null;
       }
@@ -234,6 +230,7 @@ export class MentalHealthApplication {
       const progress = await this.progressTracker.getProgressInsights(context);
 
       return {
+        user,
         conversation: {
           state: context.currentState,
           id: context.conversationId,

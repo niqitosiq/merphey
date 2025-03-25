@@ -11,6 +11,14 @@ export class SessionRepository implements SessionRepositoryPort {
   constructor(private prisma: PrismaClient) {}
 
   async create(userId: string, duration: number): Promise<Session> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (user?.balance === undefined || user.balance <= 0) {
+      throw new Error('User balance is insufficient');
+    }
+
     const session = await this.prisma.session.create({
       data: {
         userId,

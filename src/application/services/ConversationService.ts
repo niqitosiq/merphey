@@ -43,9 +43,9 @@ export class ConversationService {
     }
   }
 
-  async createUser(): Promise<User> {
+  async createUser(telegramId: string): Promise<User> {
     try {
-      const newUser = await this.userRepository.createUser();
+      const newUser = await this.userRepository.createUser(telegramId);
       return newUser;
     } catch (error) {
       throw new ApplicationError('Failed to create user', `Original error: ${error}`, 'HIGH');
@@ -54,13 +54,7 @@ export class ConversationService {
 
   async initializeConversationContext(userId: string): Promise<ConversationContext> {
     try {
-      let user = await this.userRepository.findById(userId);
-
-      if (!user) {
-        user = await this.userRepository.createUser();
-      }
-
-      console.log(user, 'user');
+      // let user = await this.userRepository.findById(userId);
 
       const newConversation = await this.conversationRepository.createConversation({
         userId,
@@ -100,12 +94,13 @@ export class ConversationService {
    * @returns ConversationContext - Complete context with history and plan
    * @throws ApplicationError if there's an issue retrieving context
    */
-  async getConversationContext(userId: string): Promise<ConversationContext> {
+  async getConversationContext(userId: string): Promise<ConversationContext | null> {
     try {
       const existingConversation = await this.conversationRepository.findLatestByUserId(userId);
 
       if (!existingConversation) {
-        return this.initializeConversationContext(userId);
+        const newConversation = await this.initializeConversationContext(userId);
+        return newConversation;
       }
 
       const messageHistory = (

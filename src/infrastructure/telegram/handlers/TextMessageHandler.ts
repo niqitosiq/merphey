@@ -1,5 +1,7 @@
+import { SessionService } from 'src/domain/services/session/SessionService';
 import { MentalHealthApplication } from '../../../application/MentalHealthApplication';
 import { SessionResponse } from '../../../domain/aggregates/conversation/entities/types';
+import { EventBus } from 'src/shared/events/EventBus';
 
 /**
  * Handler for text messages received from Telegram
@@ -10,7 +12,11 @@ export class TextMessageHandler {
    * Creates a new text message handler
    * @param application - Core application instance
    */
-  constructor(private readonly application: MentalHealthApplication) {}
+  constructor(
+    private readonly application: MentalHealthApplication,
+    private readonly sessionService: SessionService,
+    private readonly eventBus: EventBus,
+  ) {}
 
   /**
    * Handles a text message from a user
@@ -19,10 +25,31 @@ export class TextMessageHandler {
    * @param userLanguage - The language of the user
    * @returns Promise<string> - Response message to send to the user
    */
-  async handleMessage(userId: string, messageText: string): Promise<string> {
+  async handleMessage(userId: string, messageText: string): Promise<string[]> {
     try {
+      const messages = [];
       // Log received message (with sensitive data protection)
       console.log(`Processing message: ${this.formatLogMessage(userId, messageText)}`);
+
+      try {
+        // 1. Check if user has an active session
+        const activeSession = await this.sessionService.startSession(userId);
+        // const activeSession = await this.sessionService.getActiveSession(userId);
+        if (!activeSession) {
+          await this.sessionService.startSession(userId);
+
+          messages.push('Ваша сессия длинной в 30 минут началась.');
+        }
+
+        // 2. Check if session has time remaining
+        if (!activeSession.hasTimeRemaining) {
+          await this.sessionService.expireSession(activeSession.id);
+          messages.push('Ваша сессия истекла, пожалуйста, начните новую сессию.');
+        }
+      } catch (error) {
+        console.error('Error checking session:', error);
+        throw new Error('Failed to check session');
+      }
 
       // Sanitize user input - remove potentially harmful content
       const sanitizedMessage = this.sanitizeInput(messageText);
@@ -33,11 +60,12 @@ export class TextMessageHandler {
         sanitizedMessage,
       );
 
+      messages.push(this.formatResponse(response));
       // Format response for telegram
-      return this.formatResponse(response);
+      return messages;
     } catch (error) {
       console.error(`Error processing message from ${userId}:`, error);
-      return this.generateErrorMessage(error);
+      return [this.generateErrorMessage(error)];
     }
   }
 

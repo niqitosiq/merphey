@@ -21,6 +21,8 @@ import { EventBus } from '../shared/events/EventBus';
 import { TherapistService } from '../domain/services/analysis/TherapistService';
 import { PaymentService } from '../domain/services/payment/PaymentService';
 import { PaymentRepository } from '../infrastructure/persistence/postgres/PaymentRepository';
+import { SessionService } from '../domain/services/session/SessionService';
+import { SessionRepository } from '../infrastructure/persistence/postgres/SessionRepository';
 
 async function bootstrap() {
   try {
@@ -58,6 +60,11 @@ async function bootstrap() {
     const errorHandler = new ErrorHandler();
     const eventBus = new EventBus();
 
+    const sessionService = new SessionService(
+      new SessionRepository(prisma),
+      userRepository,
+      eventBus,
+    );
     // Initialize main application
     const application = new MentalHealthApplication(
       conversationService,
@@ -72,12 +79,19 @@ async function bootstrap() {
       responseComposer,
       errorHandler,
       eventBus,
+      sessionService,
     );
 
     const paymentRepository = new PaymentService(new PaymentRepository(prisma), eventBus);
 
     // Initialize and start Telegram bot
-    const bot = startTelegramBot(application, eventBus, paymentRepository, userRepository);
+    const bot = startTelegramBot(
+      application,
+      eventBus,
+      paymentRepository,
+      userRepository,
+      sessionService,
+    );
 
     console.log('PsychoBot is running! 🤖');
   } catch (error) {

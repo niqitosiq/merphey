@@ -9,6 +9,7 @@ import { PaymentHandler } from '../handlers/PaymentHandler';
 import { PaymentService } from '../../../domain/services/payment/PaymentService';
 import { UserRepository } from '../../../infrastructure/persistence/postgres/UserRepository';
 import { PaymentRepository } from '../../../infrastructure/persistence/postgres/PaymentRepository';
+import { SessionService } from 'src/domain/services/session/SessionService';
 
 /**
  * Main Telegram bot class that bootstraps the bot functionality
@@ -26,6 +27,8 @@ export class TelegramBot {
     private readonly paymentService: PaymentService,
     private readonly userRepository: UserRepository,
     private readonly eventBus: EventBus,
+
+    private readonly sessionService: SessionService,
   ) {
     // Load environment variables
     dotenv.config();
@@ -37,7 +40,7 @@ export class TelegramBot {
     }
 
     // Create handlers
-    const textMessageHandler = new TextMessageHandler(application);
+    const textMessageHandler = new TextMessageHandler(application, this.sessionService, eventBus);
     const commandHandler = new CommandHandler(application);
 
     const bot = new TelegramBotLib(token, { polling: true });
@@ -73,10 +76,17 @@ export function startTelegramBot(
   eventBus: EventBus,
   paymentService: PaymentService,
   userRepository: UserRepository,
+  sessionService: SessionService,
 ): TelegramBot {
   try {
     console.log('Starting Telegram bot...');
-    const bot = new TelegramBot(application, paymentService, userRepository, eventBus);
+    const bot = new TelegramBot(
+      application,
+      paymentService,
+      userRepository,
+      eventBus,
+      sessionService,
+    );
     console.log('Telegram bot started successfully');
     return bot;
   } catch (error) {

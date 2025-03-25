@@ -43,6 +43,7 @@ model User {
   createdAt        DateTime          @default(now())
   updatedAt        DateTime          @updatedAt
   payments         Payment[]
+  telegramId       String?           @unique // Unique Telegram ID for user
 }
 
 model Payment {
@@ -52,7 +53,7 @@ model Payment {
   amount    Int
   provider  String        @default("telegram") // Payment provider (e.g., telegram)
   status    PaymentStatus @default(PENDING)
-  metadata  Json?         // Store payment-specific metadata
+  metadata  Json? // Store payment-specific metadata
   createdAt DateTime      @default(now())
   updatedAt DateTime      @updatedAt
 
@@ -60,46 +61,46 @@ model Payment {
 }
 
 model Session {
-  id            String        @id @default(uuid())
-  userId        String
-  user          User          @relation(fields: [userId], references: [id])
+  id               String                   @id @default(uuid())
+  userId           String
+  user             User                     @relation(fields: [userId], references: [id])
   conversationLogs ConversationSessionLog[] // Session can have multiple conversation interactions
-  startTime     DateTime      @default(now())
-  endTime       DateTime?     // Null if session is still active
-  duration      Int           @default(30) // Duration in minutes
-  status        SessionStatus @default(ACTIVE)
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
+  startTime        DateTime                 @default(now())
+  endTime          DateTime? // Null if session is still active
+  duration         Int                      @default(30) // Duration in minutes
+  status           SessionStatus            @default(ACTIVE)
+  createdAt        DateTime                 @default(now())
+  updatedAt        DateTime                 @updatedAt
 
   @@index([userId])
 }
 
 model Conversation {
-  id              String                 @id @default(uuid())
-  state           ConversationState      @default(INFO_GATHERING)
+  id              String                   @id @default(uuid())
+  state           ConversationState        @default(INFO_GATHERING)
   userId          String
-  user            User                   @relation(fields: [userId], references: [id])
+  user            User                     @relation(fields: [userId], references: [id])
   messages        Message[]
   riskAssessments RiskAssessment[]
   currentPlanId   String?
-  therapeuticPlan TherapeuticPlan?       @relation(fields: [currentPlanId], references: [id])
-  contextVector   String?                // Stored as JSON or vector type
-  sessionLogs     ConversationSessionLog[]  // Conversation can span multiple sessions
-  createdAt       DateTime               @default(now())
-  updatedAt       DateTime               @updatedAt
+  therapeuticPlan TherapeuticPlan?         @relation(fields: [currentPlanId], references: [id])
+  contextVector   String? // Stored as JSON or vector type
+  sessionLogs     ConversationSessionLog[] // Conversation can span multiple sessions
+  createdAt       DateTime                 @default(now())
+  updatedAt       DateTime                 @updatedAt
 
   @@index([userId])
 }
 
 // Join table to track which conversations were active during which sessions
 model ConversationSessionLog {
-  id              String       @id @default(uuid())
-  conversationId  String
-  conversation    Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-  sessionId       String
-  session         Session      @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-  messageCount    Int          @default(0)  // Number of messages exchanged during this session
-  createdAt       DateTime     @default(now())
+  id             String       @id @default(uuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sessionId      String
+  session        Session      @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  messageCount   Int          @default(0) // Number of messages exchanged during this session
+  createdAt      DateTime     @default(now())
 
   @@unique([conversationId, sessionId])
   @@index([conversationId])
