@@ -3,7 +3,7 @@ import { startTelegramBot } from '../infrastructure/telegram/bot/TelegramBot';
 import { LLMAdapter } from '../infrastructure/llm/openai/LLMAdapter';
 import { ConversationRepository } from '../infrastructure/persistence/postgres/ConversationRepository';
 import { TherapeuticPlanRepository } from '../infrastructure/persistence/postgres/PlanRepository';
-import { PlanEvolutionService } from '../domain/aggregates/therapy/services/PlanEvolutionService';
+import { PlanEvolutionService } from '../domain/services/analysis/PlanEvolutionService';
 import { RiskAssessor } from '../domain/services/risk/RiskAssessmentService';
 import { ContextAnalyzer } from '../domain/services/analysis/CognitiveAnalysisService';
 import { StateTransitionService } from '../domain/services/state/StateTransitionService';
@@ -13,20 +13,18 @@ import { PrismaClient } from '@prisma/client';
 import { ConversationService } from './services/ConversationService';
 import { MessageValidator } from '../shared/utils/safety-filter';
 import { MessageFactory } from '../domain/aggregates/conversation/entities/MessageFactory';
-import { GptResponseGenerator } from '../infrastructure/llm/openai/GptResponseGenerator';
 import { ProgressTracker, ResponseComposer } from './services/ProgressTracker';
 import { ErrorHandler } from '../shared/errors/application-errors';
 import { RiskModel } from '../domain/services/risk/RiskModel';
 import { UserRepository } from '../infrastructure/persistence/postgres/UserRepository';
 import { EventBus } from '../shared/events/EventBus';
+import { TherapistService } from 'src/domain/services/analysis/TherapistService';
 
 async function bootstrap() {
   try {
-    // Initialize Prisma client
     const prisma = new PrismaClient();
     await prisma.$connect();
 
-    // Initialize LLM adapter
     const llmAdapter = new LLMAdapter(
       process.env.OPENROUTER_API_KEY || '',
       process.env.DEFAULT_MODEL || 'google/gemini-2.0-flash-001',
@@ -45,8 +43,8 @@ async function bootstrap() {
     const riskAssessor = new RiskAssessor(llmAdapter, crisisDetector, riskModel);
     const contextAnalyzer = new ContextAnalyzer(llmAdapter);
     const stateManager = new StateTransitionService(llmAdapter, new TransitionValidator());
-    const responseGenerator = new GptResponseGenerator(llmAdapter);
-    const planService = new PlanEvolutionService(therapeuticPlanRepository, llmAdapter);
+    const responseGenerator = new TherapistService(llmAdapter);
+    const planService = new PlanEvolutionService(llmAdapter);
     const conversationService = new ConversationService(
       conversationRepository,
       therapeuticPlanRepository,

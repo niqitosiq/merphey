@@ -5,8 +5,8 @@ import { RiskAssessor } from '../domain/services/risk/RiskAssessmentService';
 
 import { ContextAnalyzer } from '../domain/services/analysis/CognitiveAnalysisService';
 import { StateTransitionService } from '../domain/services/state/StateTransitionService';
-import { GptResponseGenerator } from '../infrastructure/llm/openai/GptResponseGenerator';
-import { PlanEvolutionService } from '../domain/aggregates/therapy/services/PlanEvolutionService';
+
+import { PlanEvolutionService } from '../domain/services/analysis/PlanEvolutionService';
 import { ProgressTracker } from './services/ProgressTracker';
 import { ResponseComposer } from './services/ProgressTracker';
 import { ErrorHandler } from '../shared/errors/application-errors';
@@ -19,6 +19,7 @@ import {
 } from '../domain/aggregates/conversation/entities/types';
 import { Message } from '../domain/aggregates/conversation/entities/Message';
 import { EventBus } from 'src/shared/events/EventBus';
+import { TherapistService } from 'src/domain/services/analysis/TherapistService';
 
 /**
  * Main application class that orchestrates the mental health chatbot workflow
@@ -32,7 +33,7 @@ export class MentalHealthApplication {
     private riskAssessor: RiskAssessor,
     private contextAnalyzer: ContextAnalyzer,
     private stateManager: StateTransitionService,
-    private responseGenerator: GptResponseGenerator,
+    private responseGenerator: TherapistService,
     private planService: PlanEvolutionService,
     private progressTracker: ProgressTracker,
     private responseComposer: ResponseComposer,
@@ -140,7 +141,7 @@ export class MentalHealthApplication {
         userId: context.userId,
         durationMs: 5000,
       });
-      therapeuticResponse = await this.responseGenerator.generateTherapeuticResponse(
+      therapeuticResponse = await this.responseGenerator.generateResponse(
         context,
         {
           language: analysis.language,
@@ -172,7 +173,7 @@ export class MentalHealthApplication {
       };
     }
 
-    therapeuticResponse = await this.responseGenerator.generateTherapeuticResponse(
+    therapeuticResponse = await this.responseGenerator.generateResponse(
       context,
       analysis,
       context.therapeuticPlan.currentVersion,

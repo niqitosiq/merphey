@@ -11,7 +11,7 @@ import { ConversationState, RiskLevel } from '@prisma/client';
 import { ApplicationError } from '../../shared/errors/application-errors';
 import { Message } from '@prisma/client';
 import { UserRepository } from 'src/infrastructure/persistence/postgres/UserRepository';
-import { PlanEvolutionService } from 'src/domain/aggregates/therapy/services/PlanEvolutionService';
+import { PlanEvolutionService } from 'src/domain/services/analysis/PlanEvolutionService';
 
 /**
  * Application service responsible for managing conversation lifecycle
