@@ -6,6 +6,7 @@ export class User {
     public readonly id: string,
     public readonly createdAt: Date,
     public readonly updatedAt: Date,
+    private _balance: number,
     private conversations: Conversation[] = [],
     private therapeuticPlans: TherapeuticPlan[] = [],
   ) {}
@@ -56,5 +57,35 @@ export class User {
       return undefined;
     }
     return this.conversations[this.conversations.length - 1];
+  }
+  get balance(): number {
+    return this._balance;
+  }
+
+  get hasEnoughBalanceForSession(): boolean {
+    return this._balance >= 1; // 1 balance unit = 1 session
+  }
+
+  increaseBalance(amount: number): void {
+    if (amount <= 0) {
+      throw new Error('Balance increase amount must be positive');
+    }
+    this._balance += amount;
+  }
+
+  decreaseBalance(amount: number): void {
+    if (amount <= 0) {
+      throw new Error('Balance decrease amount must be positive');
+    }
+
+    if (this._balance < amount) {
+      throw new Error('Insufficient balance');
+    }
+
+    this._balance -= amount;
+  }
+
+  deductSessionCost(): void {
+    this.decreaseBalance(1); // Each session costs 1 balance unit
   }
 }

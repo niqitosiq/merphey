@@ -1,11 +1,26 @@
-import { ConversationState, RiskLevel } from '@prisma/client';
+export enum ConversationState {
+  INFO_GATHERING = 'INFO_GATHERING',
+  ACTIVE_GUIDANCE = 'ACTIVE_GUIDANCE',
+  PLAN_REVISION = 'PLAN_REVISION',
+  EMERGENCY_INTERVENTION = 'EMERGENCY_INTERVENTION',
+  SESSION_CLOSING = 'SESSION_CLOSING',
+}
 
-export { ConversationState, RiskLevel };
+export enum RiskLevel {
+  LOW = 'LOW',
+  MEDIUM = 'MEDIUM',
+  HIGH = 'HIGH',
+  CRITICAL = 'CRITICAL',
+}
 
-/**
- * Message role types for conversation messages
- */
-export enum MessageRole {
-  USER = 'user',
-  ASSISTANT = 'assistant',
+export enum SessionStatus {
+  ACTIVE = 'ACTIVE',
+  COMPLETED = 'COMPLETED',
+  EXPIRED = 'EXPIRED',
+}
+
+export enum PaymentStatus {
+  PENDING = 'PENDING',
+  COMPLETED = 'COMPLETED',
+  FAILED = 'FAILED',
 }

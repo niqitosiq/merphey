@@ -2,108 +2,64 @@ import { PrismaClient, User as PrismaUser } from '@prisma/client';
 import { User } from '../../../domain/aggregates/user/entities/User';
 
 export class UserRepository {
-  private prisma: PrismaClient;
+  constructor(private prisma: PrismaClient) {}
 
-  constructor() {
-    this.prisma = new PrismaClient();
-  }
-
-  /**
-   * Find a user by their ID
-   */
-  async findById(id: string): Promise<User | null> {
+  async findById(userId: string): Promise<User | null> {
     const user = await this.prisma.user.findUnique({
-      where: { id },
-      include: {
-        conversations: {
-          include: {
-            messages: true,
-            riskAssessments: true,
-          },
-        },
-        therapeuticPlans: {
-          include: {
-            versions: true,
-            currentVersion: true,
-          },
-        },
-      },
+      where: { id: userId },
     });
 
-    if (!user) {
-      return null;
-    }
-
-    return this.mapToDomainUser(user);
+    return user ? this.mapToDomainModel(user) : null;
   }
 
-  /**
-   * Create a new user
-   */
-  async createUser(userId: string): Promise<User> {
+  async createUser(): Promise<User> {
     const user = await this.prisma.user.create({
       data: {
-        id: userId,
-      },
-      include: {
-        conversations: true,
-        therapeuticPlans: true,
+        balance: 1, // Default balance for one free session
       },
     });
 
-    return this.mapToDomainUser(user);
+    return this.mapToDomainModel(user);
   }
 
-  /**
-   * Get users with active conversations within the specified time window
-   */
-  async getActiveUsers(withinHours: number = 24): Promise<User[]> {
-    const dateThreshold = new Date(Date.now() - withinHours * 60 * 60 * 1000);
-
-    const users = await this.prisma.user.findMany({
-      where: {
-        conversations: {
-          some: {
-            updatedAt: {
-              gte: dateThreshold,
-            },
-          },
-        },
+  async updateBalance(userId: string, newBalance: number): Promise<User> {
+    const user = await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        balance: newBalance,
       },
-      include: {
-        conversations: {
-          include: {
-            messages: true,
-            riskAssessments: true,
-          },
-        },
-        therapeuticPlans: {
-          include: {
-            versions: true,
-            currentVersion: true,
-          },
+    });
+
+    return this.mapToDomainModel(user);
+  }
+
+  async incrementBalance(userId: string, amount: number): Promise<User> {
+    const user = await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        balance: {
+          increment: amount,
         },
       },
     });
 
-    return users.map((user) => this.mapToDomainUser(user));
+    return this.mapToDomainModel(user);
   }
 
-  /**
-   * Map Prisma user model to domain user entity
-   */
-  private mapToDomainUser(
-    prismaUser: PrismaUser & {
-      conversations?: any[];
-      therapeuticPlans?: any[];
-    },
-  ): User {
-    return new User(
-      prismaUser.id,
-      prismaUser.createdAt,
-      prismaUser.updatedAt,
-      prismaUser.conversations || [],
-      prismaUser.therapeuticPlans || [],
-    );
+  async decrementBalance(userId: string, amount: number): Promise<User> {
+    const user = await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        balance: {
+          decrement: amount,
+        },
+      },
+    });
+
+    return this.mapToDomainModel(user);
+  }
+
+  private mapToDomainModel(prismaUser: PrismaUser): User {
+    return new User(prismaUser.id, prismaUser.createdAt, prismaUser.updatedAt, prismaUser.balance);
   }
 }
