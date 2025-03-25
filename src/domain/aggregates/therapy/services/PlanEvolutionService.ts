@@ -116,8 +116,7 @@ export class PlanEvolutionService {
         .join('\n') || 'No specific insights recorded yet';
 
     // Build instruction section with clear guidance on response format
-    return `
-    **THERAPEUTIC PLAN REVISION REQUEST**
+    return `**THERAPEUTIC PLAN REVISION REQUEST**
 
 **Key User Context:**  
 - Current State: ${contextUpdate.currentState}  
