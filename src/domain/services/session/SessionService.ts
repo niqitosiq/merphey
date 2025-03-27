@@ -45,6 +45,15 @@ export class SessionService {
   }
 
   async getActiveSession(userId: string): Promise<Session | null> {
+    const session = await this.sessionRepository.findActiveByUserId(userId);
+
+    if (!session?.hasTimeRemaining) {
+      if (session) {
+        await this.expireSession(session.id);
+      }
+      return null;
+    }
+
     return this.sessionRepository.findActiveByUserId(userId);
   }
 

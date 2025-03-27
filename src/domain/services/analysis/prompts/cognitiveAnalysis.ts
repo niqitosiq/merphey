@@ -40,11 +40,9 @@ export const buildCognitiveAnalysisPrompt = ({
 
   return `**THERAPEUTIC MESSAGE ANALYSIS REQUEST**
 
-  **Message to Analyze:**  
-"${message.content}"
-
 **Conversation Context:**  
 ${recentHistory}
+[user]: ${message.content}
 
 **User Insights:**  
 ${userInsights}

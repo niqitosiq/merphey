@@ -44,6 +44,17 @@ export class TelegramBot {
     const commandHandler = new CommandHandler(application, this.userRepository);
 
     const bot = new TelegramBotLib(token, { polling: true });
+
+    this.eventBus.subscribe('SEND_TYPING', (data) => {
+      const { userId } = data;
+      bot.sendChatAction(userId, 'typing');
+    });
+
+    this.eventBus.subscribe('ASK_USER_TO_WAIT', (data) => {
+      const { userId, message } = data;
+      bot.sendMessage(userId, message);
+    });
+
     const paymentHandler = new PaymentHandler(bot, this.paymentService, userRepository, eventBus);
 
     // Create message dispatcher

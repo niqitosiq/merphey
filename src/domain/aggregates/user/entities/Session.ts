@@ -34,13 +34,20 @@ export class Session {
     }
 
     const expirationTime = new Date(this.startTime.getTime() + this.duration * 60 * 1000);
+
+    console.log(`Expiration Time: ${expirationTime}`);
     const now = new Date();
+    console.log(`Current Time: ${new Date()}`);
     const remainingMs = expirationTime.getTime() - now.getTime();
+    console.log(`Remaining Time in ms: ${remainingMs}`);
+
+    console.log(`Remaining Time in minutes: ${Math.floor(remainingMs / 1000 / 60)}`);
 
     return Math.max(0, Math.floor(remainingMs / 1000 / 60)); // Remaining time in minutes
   }
 
   get hasTimeRemaining(): boolean {
+    console.log(this.timeRemaining);
     return this.timeRemaining > 0;
   }
 
