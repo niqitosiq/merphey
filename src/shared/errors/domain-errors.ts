@@ -79,3 +79,18 @@ export class AnalysisError extends DomainError {
     this.name = 'AnalysisError';
   }
 }
+
+/**
+ * Error for session operations
+ */
+export class SessionError extends DomainError {
+  constructor(
+    message: string,
+    public readonly sessionId?: string,
+    public readonly userId?: string,
+    public readonly reason?: string,
+  ) {
+    super(`Session error: ${message}`);
+    this.name = 'SessionError';
+  }
+}

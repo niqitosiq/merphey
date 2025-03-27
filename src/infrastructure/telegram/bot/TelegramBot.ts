@@ -41,7 +41,7 @@ export class TelegramBot {
 
     // Create handlers
     const textMessageHandler = new TextMessageHandler(application, this.sessionService, eventBus);
-    const commandHandler = new CommandHandler(application);
+    const commandHandler = new CommandHandler(application, this.userRepository);
 
     const bot = new TelegramBotLib(token, { polling: true });
     const paymentHandler = new PaymentHandler(bot, this.paymentService, userRepository, eventBus);

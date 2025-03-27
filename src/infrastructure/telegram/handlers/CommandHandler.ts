@@ -1,3 +1,4 @@
+import { UserRepository } from 'src/infrastructure/persistence/postgres/UserRepository';
 import { MentalHealthApplication } from '../../../application/MentalHealthApplication';
 import { ConversationState } from '../../../domain/shared/enums';
 
@@ -15,13 +16,17 @@ export class CommandHandler {
     'feedback',
     'resources',
     'buy',
+    'getExtraCreditsForCoolGuys',
   ];
 
   /**
    * Creates a new command handler
    * @param application - Core application instance
    */
-  constructor(private readonly application: MentalHealthApplication) {}
+  constructor(
+    private readonly application: MentalHealthApplication,
+    private readonly userRepository: UserRepository,
+  ) {}
 
   /**
    * Handles a command message from a user
@@ -52,12 +57,31 @@ export class CommandHandler {
         case 'cancel':
           return await this.handleCancelCommand(userId);
 
+        case 'getExtraCreditsForCoolGuys':
+          return await this.getExtraCreditsForCoolGuys(userId);
+
         default:
           return `Извините, команда /${command} пока не реализована.`;
       }
     } catch (error) {
       console.error(`Error processing command /${command} from user ${userId}:`, error);
       return `Извините, произошла ошибка при обработке команды /${command}. Пожалуйста, попробуйте позже.`;
+    }
+  }
+
+  /**
+   * Handles the /getExtraCreditsForCoolGuys command
+   * @param userId - The Telegram user ID
+   * @returns Promise<string> - Confirmation message
+   */
+  private async getExtraCreditsForCoolGuys(userId: string): Promise<string> {
+    try {
+      // Add extra credits to user's account
+      await this.userRepository.incrementBalance(userId, 1);
+      return 'Вы получили 1 дополнительный кредит! 🎉';
+    } catch (error) {
+      console.error(`Error adding extra credits for ${userId}:`, error);
+      return 'Не удалось добавить кредиты. Пожалуйста, попробуйте позже.';
     }
   }
 

@@ -1,7 +1,8 @@
 import { SessionService } from 'src/domain/services/session/SessionService';
 import { MentalHealthApplication } from '../../../application/MentalHealthApplication';
 import { SessionResponse } from '../../../domain/aggregates/conversation/entities/types';
-import { EventBus } from 'src/shared/events/EventBus';
+import { EventBus } from '../../../shared/events/EventBus';
+import { SessionError } from '../../../shared/errors/domain-errors';
 
 /**
  * Handler for text messages received from Telegram
@@ -31,32 +32,22 @@ export class TextMessageHandler {
       // Log received message (with sensitive data protection)
       console.log(`Processing message: ${this.formatLogMessage(userId, messageText)}`);
 
-      try {
-        // 1. Check if user has an active session
-        const activeSession = await this.sessionService.startSession(userId);
-        // const activeSession = await this.sessionService.getActiveSession(userId);
-        if (!activeSession) {
-          try {
-            await this.sessionService.startSession(userId);
-          } catch (error: any) {
-            if (error.message === 'Insufficient balance to start a session') {
-              messages.push(
-                'У вас недостаточно средств для начала сессии. Пожалуйста, пополните баланс. /buy',
-              );
-            }
-          }
+      // 1. Check if user has an active session
+      const activeSession = await this.sessionService.getActiveSession(userId);
 
+      if (!activeSession || !activeSession.hasTimeRemaining) {
+        try {
+          await this.sessionService.startSession(userId);
           messages.push('Ваша сессия длинной в 30 минут началась.');
+        } catch (error) {
+          if (error instanceof SessionError) {
+            messages.push(
+              'У вас недостаточно средств для начала сессии. Пожалуйста, пополните баланс. /buy',
+            );
+            return messages;
+          }
+          throw error;
         }
-
-        // 2. Check if session has time remaining
-        if (!activeSession.hasTimeRemaining) {
-          await this.sessionService.expireSession(activeSession.id);
-          messages.push('Ваша сессия истекла, пожалуйста, начните новую сессию.');
-        }
-      } catch (error) {
-        console.error('Error checking session:', error);
-        throw new Error('Failed to check session');
       }
 
       // Sanitize user input - remove potentially harmful content
@@ -67,9 +58,8 @@ export class TextMessageHandler {
         userId,
         sanitizedMessage,
       );
-
       messages.push(this.formatResponse(response));
-      // Format response for telegram
+
       return messages;
     } catch (error) {
       console.error(`Error processing message from ${userId}:`, error);

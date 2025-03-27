@@ -5,6 +5,7 @@ import { SessionStatus } from '../../shared/enums';
 import { EventBus } from '../../../shared/events/EventBus';
 import { EventTypes } from '../../../shared/events/EventTypes';
 import { UserRepository } from '../../../infrastructure/persistence/postgres/UserRepository';
+import { SessionError } from '../../../shared/errors/domain-errors';
 
 export class SessionService {
   constructor(
@@ -16,33 +17,29 @@ export class SessionService {
   async startSession(userId: User['id'], duration: number = 30): Promise<Session> {
     const user = await this.userRepository.findById(userId);
     if (!user) {
-      throw new Error(`User with ID ${userId} not found`);
-    }
-    // Check if user has enough balance
-    if (!user.hasEnoughBalanceForSession) {
-      throw new Error('Insufficient balance to start a session');
+      throw new SessionError('User not found', undefined, userId, 'USER_NOT_FOUND');
     }
 
-    // Check if user already has an active session
+    if (!user.hasEnoughBalanceForSession) {
+      throw new SessionError('Insufficient balance', undefined, userId, 'INSUFFICIENT_BALANCE');
+    }
+
     const activeSession = await this.sessionRepository.findActiveByUserId(userId);
     if (activeSession) {
       return activeSession;
     }
 
-    // Deduct session cost from user's balance
+    // Create new session and deduct cost
     const session = await this.sessionRepository.create(userId, duration);
     user.deductSessionCost();
-    this.userRepository.decrementBalance(userId, 1);
+    await this.userRepository.decrementBalance(userId, 1);
 
-    // Create new session
-
-    // publish session started event
-    // this.eventBus.publish(EventTypes.SESSION_STARTED, {
-    //   sessionId: session.id,
-    //   userId: user.id,
-    //   startTime: session.startTime,
-    //   duration: session.duration,
-    // });
+    this.eventBus.publish(EventTypes.SESSION_STARTED, {
+      sessionId: session.id,
+      userId: user.id,
+      startTime: session.startTime,
+      duration: session.duration,
+    });
 
     return session;
   }
@@ -55,11 +52,16 @@ export class SessionService {
     const session = await this.sessionRepository.findById(sessionId);
 
     if (!session) {
-      throw new Error(`Session with ID ${sessionId} not found`);
+      throw new SessionError('Session not found', sessionId, undefined, 'SESSION_NOT_FOUND');
     }
 
     if (session.status !== SessionStatus.ACTIVE) {
-      throw new Error('Cannot complete a session that is not active');
+      throw new SessionError(
+        'Cannot complete inactive session',
+        sessionId,
+        session.userId,
+        'INVALID_STATUS',
+      );
     }
 
     const now = new Date();
@@ -69,7 +71,6 @@ export class SessionService {
       now,
     );
 
-    // publish session completed event
     this.eventBus.publish(EventTypes.SESSION_COMPLETED, {
       sessionId: updatedSession.id,
       userId: updatedSession.userId,
@@ -83,11 +84,16 @@ export class SessionService {
     const session = await this.sessionRepository.findById(sessionId);
 
     if (!session) {
-      throw new Error(`Session with ID ${sessionId} not found`);
+      throw new SessionError('Session not found', sessionId, undefined, 'SESSION_NOT_FOUND');
     }
 
     if (session.status !== SessionStatus.ACTIVE) {
-      throw new Error('Cannot expire a session that is not active');
+      throw new SessionError(
+        'Cannot expire inactive session',
+        sessionId,
+        session.userId,
+        'INVALID_STATUS',
+      );
     }
 
     const now = new Date();
@@ -97,7 +103,6 @@ export class SessionService {
       now,
     );
 
-    // publish session expired event
     this.eventBus.publish(EventTypes.SESSION_EXPIRED, {
       sessionId: updatedSession.id,
       userId: updatedSession.userId,
