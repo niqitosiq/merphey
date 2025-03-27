@@ -36,7 +36,15 @@ export class TextMessageHandler {
         const activeSession = await this.sessionService.startSession(userId);
         // const activeSession = await this.sessionService.getActiveSession(userId);
         if (!activeSession) {
-          await this.sessionService.startSession(userId);
+          try {
+            await this.sessionService.startSession(userId);
+          } catch (error: any) {
+            if (error.message === 'Insufficient balance to start a session') {
+              messages.push(
+                'У вас недостаточно средств для начала сессии. Пожалуйста, пополните баланс. /buy',
+              );
+            }
+          }
 
           messages.push('Ваша сессия длинной в 30 минут началась.');
         }
