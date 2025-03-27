@@ -1,10 +1,4 @@
-export enum ConversationState {
-  INFO_GATHERING = 'INFO_GATHERING',
-  ACTIVE_GUIDANCE = 'ACTIVE_GUIDANCE',
-  PLAN_REVISION = 'PLAN_REVISION',
-  EMERGENCY_INTERVENTION = 'EMERGENCY_INTERVENTION',
-  SESSION_CLOSING = 'SESSION_CLOSING',
-}
+export { ConversationState } from '@prisma/client';
 
 export enum RiskLevel {
   LOW = 'LOW',
