@@ -1,7 +1,6 @@
 import { MessageFactory } from '../domain/aggregates/conversation/entities/MessageFactory';
 import { RiskAssessor } from '../domain/services/risk/RiskAssessmentService';
 import { SessionService } from '../domain/services/session/SessionService';
-import { MessageValidator } from '../shared/utils/safety-filter';
 import { ConversationService } from './services/ConversationService';
 
 import { ContextAnalyzer } from '../domain/services/analysis/CognitiveAnalysisService';
@@ -20,15 +19,20 @@ import {
 	SessionResponse,
 	TherapeuticResponse,
 } from '../domain/aggregates/conversation/entities/types';
+import { scoped, Lifecycle, injectable, autoInjectable } from 'tsyringe';
+import { validateInput } from 'src/shared/utils/safety-filter';
 
 /**
  * Main application class that orchestrates the mental health chatbot workflow
  * This is the core entry point for processing user messages and generating therapeutic responses
  */
+
+@scoped(Lifecycle.ContainerScoped)
+@injectable()
+@autoInjectable()
 export class MentalHealthApplication {
   constructor(
     private conversationService: ConversationService,
-    private messageValidator: MessageValidator,
     private messageFactory: MessageFactory,
     private riskAssessor: RiskAssessor,
     private contextAnalyzer: ContextAnalyzer,
@@ -60,7 +64,7 @@ export class MentalHealthApplication {
 
       // 4. Validate and preprocess input
       // This will sanitize the message and check for inappropriate content
-      const sanitizedMessage = this.messageValidator.validateInput(message);
+      const sanitizedMessage = validateInput(message);
       // It will also normalize text formatting and handle special characters
 
       // 5. Create message entity

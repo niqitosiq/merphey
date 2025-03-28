@@ -8,11 +8,16 @@ import { PlanVersion } from 'src/domain/aggregates/therapy/entities/PlanVersion'
 import { AnalysisResult } from './CognitiveAnalysisService';
 import { buildTherapeuticPrompt } from './prompts/therapeuticResponse';
 import { ConversationState } from '@prisma/client';
+import { autoInjectable, injectable, Lifecycle, scoped } from 'tsyringe';
 
 /**
  * Domain service for generating therapeutic responses
  * Responsible for creating appropriate therapeutic responses based on conversation context
  */
+
+@scoped(Lifecycle.ContainerScoped)
+@injectable()
+@autoInjectable()
 export class TherapistService {
   constructor(private llmService: LLMAdapter) {}
 

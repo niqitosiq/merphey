@@ -10,13 +10,18 @@ import { PaymentService } from '../../../domain/services/payment/PaymentService'
 import { UserRepository } from '../../../infrastructure/persistence/postgres/UserRepository';
 import { PaymentRepository } from '../../../infrastructure/persistence/postgres/PaymentRepository';
 import { SessionService } from 'src/domain/services/session/SessionService';
+import { scoped, Lifecycle, injectable, autoInjectable, container } from 'tsyringe';
 
 /**
  * Main Telegram bot class that bootstraps the bot functionality
  * Initializes the bot with necessary handlers and configuration
  */
+
+@scoped(Lifecycle.ContainerScoped)
+@injectable()
+@autoInjectable()
 export class TelegramBot {
-  private messageDispatcher: MessageDispatcher;
+  private messageDispatcher: MessageDispatcher | null = null;
 
   /**
    * Creates and initializes the Telegram bot
@@ -30,7 +35,11 @@ export class TelegramBot {
 
     private readonly sessionService: SessionService,
   ) {
-    // Load environment variables
+   
+  }
+
+  bootstrap(){
+	 // Load environment variables
     dotenv.config();
 
     const token = process.env.TELEGRAM_BOT_TOKEN;
@@ -40,8 +49,10 @@ export class TelegramBot {
     }
 
     // Create handlers
-    const textMessageHandler = new TextMessageHandler(application, this.sessionService, eventBus);
-    const commandHandler = new CommandHandler(application, this.userRepository);
+    const textMessageHandler = container.resolve(TextMessageHandler)
+    const commandHandler = container.resolve(CommandHandler)
+    const userRepository = container.resolve(UserRepository)
+    const eventBus = container.resolve(EventBus)
 
     const bot = new TelegramBotLib(token, { polling: true });
 
@@ -72,36 +83,8 @@ export class TelegramBot {
    * Gets the message dispatcher instance
    * @returns MessageDispatcher
    */
-  public getMessageDispatcher(): MessageDispatcher {
+  public getMessageDispatcher(): MessageDispatcher | null {
     return this.messageDispatcher;
   }
 }
 
-/**
- * Function to start the Telegram bot
- * @param application - The core application instance
- * @returns TelegramBot instance
- */
-export function startTelegramBot(
-  application: MentalHealthApplication,
-  eventBus: EventBus,
-  paymentService: PaymentService,
-  userRepository: UserRepository,
-  sessionService: SessionService,
-): TelegramBot {
-  try {
-    console.log('Starting Telegram bot...');
-    const bot = new TelegramBot(
-      application,
-      paymentService,
-      userRepository,
-      eventBus,
-      sessionService,
-    );
-    console.log('Telegram bot started successfully');
-    return bot;
-  } catch (error) {
-    console.error('Failed to start Telegram bot:', error);
-    throw error;
-  }
-}

@@ -1,30 +1,31 @@
 import {
-  PrismaClient,
-  ConversationState,
-  RiskLevel,
-  Message,
-  Conversation as PrismaConversation,
+	ConversationState,
+	Message,
+	Conversation as PrismaConversation,
+	RiskLevel
 } from '@prisma/client';
-import {
-  ConversationContext,
-  Metadata,
-} from '../../../domain/aggregates/conversation/entities/types';
-import { RiskAssessment } from '../../../domain/aggregates/conversation/entities/RiskAssessment';
+import { PrismaService } from 'src/domain/services/prisma/prisma.service';
+import { autoInjectable, injectable, Lifecycle, scoped } from 'tsyringe';
 import { Conversation } from '../../../domain/aggregates/conversation/entities/Conversation';
 import { ConversationFactory } from '../../../domain/aggregates/conversation/entities/ConversationFactory';
-import { JsonValue } from '@prisma/client/runtime/library';
+import { RiskAssessment } from '../../../domain/aggregates/conversation/entities/RiskAssessment';
+import {
+	ConversationContext,
+	Metadata,
+} from '../../../domain/aggregates/conversation/entities/types';
 
 /**
  * Repository for conversation data persistence
  * Handles storage and retrieval of conversations, messages and risk assessments
  */
+@scoped(Lifecycle.ContainerScoped)
+@injectable()
+@autoInjectable()
 export class ConversationRepository {
-  private prisma: PrismaClient;
-  private conversationFactory: ConversationFactory;
 
-  constructor() {
-    this.prisma = new PrismaClient();
-    this.conversationFactory = new ConversationFactory();
+  constructor(
+	private conversationFactory: ConversationFactory,
+	private prisma: PrismaService) {
   }
 
 

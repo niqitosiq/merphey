@@ -1,6 +1,7 @@
 import { RiskLevel } from '@prisma/client';
 import { LLMAdapter } from '../../../infrastructure/llm/openai/LLMAdapter';
 import { buildEmergencyPrompt } from './prompts/emergencyResponse';
+import { scoped, Lifecycle, injectable, autoInjectable } from 'tsyringe';
 
 interface CrisisResource {
   name: string;
@@ -22,6 +23,9 @@ interface EmergencyResponse {
   };
 }
 
+@scoped(Lifecycle.ContainerScoped)
+@injectable()
+@autoInjectable()
 export class EmergencyService {
   constructor(
     private llmService: LLMAdapter,

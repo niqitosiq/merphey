@@ -1,3 +1,5 @@
+import { scoped, Lifecycle, injectable, autoInjectable } from "tsyringe";
+
 interface TrendAnalysis {
   direction: 'increasing' | 'decreasing' | 'stable';
   volatility: number;
@@ -8,6 +10,10 @@ interface TrendAnalysis {
  * Model for analyzing risk patterns and trends
  * Provides mathematical analysis of risk assessment data
  */
+
+@scoped(Lifecycle.ContainerScoped)
+@injectable()
+@autoInjectable()
 export class RiskModel {
   private readonly TREND_THRESHOLD = 0.1;
   private readonly VOLATILITY_WINDOW = 5;

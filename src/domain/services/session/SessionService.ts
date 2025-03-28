@@ -6,7 +6,12 @@ import { EventTypes } from '../../../shared/events/EventTypes';
 import { UserRepository } from '../../../infrastructure/persistence/postgres/UserRepository';
 import { SessionError } from '../../../shared/errors/domain-errors';
 import { SessionStatus } from '@prisma/client';
+import { scoped, Lifecycle, injectable, autoInjectable } from 'tsyringe';
 
+
+@scoped(Lifecycle.ContainerScoped)
+@injectable()
+@autoInjectable()
 export class SessionService {
   constructor(
     private sessionRepository: SessionRepository,

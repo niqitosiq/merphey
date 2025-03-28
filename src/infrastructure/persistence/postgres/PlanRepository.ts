@@ -7,12 +7,17 @@ import { TherapeuticPlan } from '../../../domain/aggregates/therapy/entities/The
 import { PlanContent, PlanVersion } from '../../../domain/aggregates/therapy/entities/PlanVersion';
 import { ApplicationError } from '../../../shared/errors/application-errors';
 import { InputJsonValue, JsonValue } from '@prisma/client/runtime/library';
+import { autoInjectable, injectable, Lifecycle, scoped } from 'tsyringe';
+import { PrismaService } from 'src/domain/services/prisma/prisma.service';
 
+@scoped(Lifecycle.ContainerScoped)
+@injectable()
+@autoInjectable()
 export class TherapeuticPlanRepository {
-  private prisma: PrismaClient;
 
-  constructor() {
-    this.prisma = new PrismaClient();
+  constructor(
+	private prisma: PrismaService
+) {
   }
 
   /**

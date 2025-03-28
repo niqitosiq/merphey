@@ -1,8 +1,14 @@
-import { PrismaClient, User as PrismaUser } from '@prisma/client';
+import { User as PrismaUser } from '@prisma/client';
 import { User } from '../../../domain/aggregates/user/entities/User';
+import { scoped, Lifecycle, injectable, autoInjectable } from 'tsyringe';
+import { PrismaService } from 'src/domain/services/prisma/prisma.service';
 
+
+@scoped(Lifecycle.ContainerScoped)
+@injectable()
+@autoInjectable()
 export class UserRepository {
-  constructor(private prisma: PrismaClient) {}
+  constructor(private prisma: PrismaService) {}
 
   async findById(userId: string): Promise<User | null> {
     const user = await this.prisma.user.findUnique({

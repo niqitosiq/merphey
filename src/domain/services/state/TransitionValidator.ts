@@ -1,8 +1,13 @@
 import { ConversationState } from "@prisma/client";
+import { scoped, Lifecycle, injectable, autoInjectable } from "tsyringe";
 
 /**
  * Validates state transitions against allowed state machine paths
  */
+
+@scoped(Lifecycle.ContainerScoped)
+@injectable()
+@autoInjectable()
 export class TransitionValidator {
   // Define allowed state transitions (simplified example)
   private readonly allowedTransitions = new Map<ConversationState, ConversationState[]>([
