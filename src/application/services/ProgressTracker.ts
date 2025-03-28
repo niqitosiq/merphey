@@ -1,3 +1,4 @@
+import { scoped, Lifecycle, injectable, autoInjectable } from 'tsyringe';
 import {
   ConversationContext,
   ProcessingResult,
@@ -13,6 +14,10 @@ import {
  * Application service for measuring therapeutic progress in sessions
  * Responsible for calculating session metrics and tracking engagement
  */
+
+@scoped(Lifecycle.ContainerScoped)
+@injectable()
+@autoInjectable()
 export class ProgressTracker {
   private readonly engagementThresholds = {
     HIGH: 0.8,
@@ -265,6 +270,10 @@ export class ProgressTracker {
  * Application service for composing final response packages
  * Formats therapeutic responses for delivery to the user interface
  */
+
+@scoped(Lifecycle.ContainerScoped)
+@injectable()
+@autoInjectable()
 export class ResponseComposer {
   /**
    * Creates a complete response package for the user interface

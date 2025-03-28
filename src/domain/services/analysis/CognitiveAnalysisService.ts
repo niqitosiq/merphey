@@ -4,6 +4,7 @@ import { Message } from 'src/domain/aggregates/conversation/entities/Message';
 import { UserMessage } from 'src/domain/aggregates/conversation/entities/types';
 import { Goal } from 'src/domain/aggregates/therapy/entities/PlanVersion';
 import { buildCognitiveAnalysisPrompt } from './prompts/cognitiveAnalysis';
+import { autoInjectable, injectable, Lifecycle, scoped } from 'tsyringe';
 
 export interface AnalysisResult {
   shouldBeRevised: boolean;
@@ -15,6 +16,10 @@ export interface AnalysisResult {
  * Domain service for analyzing user messages in therapeutic context
  * Provides deep cognitive and emotional analysis of user communications
  */
+
+@scoped(Lifecycle.ContainerScoped)
+@injectable()
+@autoInjectable()
 export class ContextAnalyzer {
   constructor(private llmService: LLMAdapter) {}
 

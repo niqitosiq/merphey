@@ -3,11 +3,16 @@ import { MentalHealthApplication } from '../../../application/MentalHealthApplic
 import { SessionResponse } from '../../../domain/aggregates/conversation/entities/types';
 import { EventBus } from '../../../shared/events/EventBus';
 import { SessionError } from '../../../shared/errors/domain-errors';
+import { scoped, Lifecycle, injectable, autoInjectable } from 'tsyringe';
 
 /**
  * Handler for text messages received from Telegram
  * Processes regular text messages from users and routes them to the core application
  */
+
+@scoped(Lifecycle.ContainerScoped)
+@injectable()
+@autoInjectable()
 export class TextMessageHandler {
   /**
    * Creates a new text message handler

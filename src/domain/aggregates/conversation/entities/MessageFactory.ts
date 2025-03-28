@@ -1,11 +1,16 @@
 import { Message } from './Message';
 import { v4 as uuidv4 } from 'uuid';
 import { Metadata } from './types';
+import { scoped, Lifecycle, injectable, autoInjectable } from 'tsyringe';
 
 /**
  * Factory for creating message entities
  * Handles the creation of different types of messages with appropriate metadata
  */
+
+@scoped(Lifecycle.ContainerScoped)
+@injectable()
+@autoInjectable()
 export class MessageFactory {
   /**
    * Creates a message with provided parameters

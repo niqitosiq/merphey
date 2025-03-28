@@ -4,6 +4,7 @@ import { CrisisDetector } from './CrisisDetector'
 import { RiskModel } from './RiskModel'
 import { v4 } from 'uuid'
 import { RiskLevel } from '@prisma/client'
+import { scoped, Lifecycle, injectable, autoInjectable } from 'tsyringe'
 
 interface SentimentAnalysis {
 	score: number
@@ -27,6 +28,10 @@ interface RiskTrend {
  * Domain service responsible for evaluating psychological risk in user messages
  * Core risk evaluation logic for the mental health application
  */
+
+@scoped(Lifecycle.ContainerScoped)
+@injectable()
+@autoInjectable()
 export class RiskAssessor {
 	constructor(
 		private llmService: LLMAdapter,

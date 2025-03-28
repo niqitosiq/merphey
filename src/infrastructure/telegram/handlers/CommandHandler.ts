@@ -1,11 +1,16 @@
 import { UserRepository } from 'src/infrastructure/persistence/postgres/UserRepository';
 import { MentalHealthApplication } from '../../../application/MentalHealthApplication';
 import { ConversationState } from '@prisma/client';
+import { scoped, Lifecycle, injectable, autoInjectable } from 'tsyringe';
 
 /**
  * Handler for command messages received from Telegram
  * Processes command messages starting with / and routes them appropriately
  */
+
+@scoped(Lifecycle.ContainerScoped)
+@injectable()
+@autoInjectable()
 export class CommandHandler {
   // Available bot commands
   private readonly availableCommands = [

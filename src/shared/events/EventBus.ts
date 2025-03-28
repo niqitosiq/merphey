@@ -1,22 +1,16 @@
+import { scoped, Lifecycle, injectable, autoInjectable } from 'tsyringe';
 import { EventType } from './EventTypes';
 
 /**
  * Event bus for system-wide events
  * Allows decoupled communication between components
  */
-export class EventBus {
-  private static instance: EventBus;
-  private listeners: Map<string, Array<(data?: any) => void>> = new Map();
 
-  /**
-   * Get the singleton instance of EventBus
-   */
-  public static getInstance(): EventBus {
-    if (!EventBus.instance) {
-      EventBus.instance = new EventBus();
-    }
-    return EventBus.instance;
-  }
+@scoped(Lifecycle.ContainerScoped)
+@injectable()
+@autoInjectable()
+export class EventBus {
+  private listeners: Map<string, Array<(data?: any) => void>> = new Map();
 
   /**
    * Subscribe to an event

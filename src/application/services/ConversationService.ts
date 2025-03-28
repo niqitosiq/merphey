@@ -13,11 +13,17 @@ import { Message } from '@prisma/client';
 import { UserRepository } from 'src/infrastructure/persistence/postgres/UserRepository';
 import { PlanEvolutionService } from 'src/domain/services/analysis/PlanEvolutionService';
 import { User } from 'src/domain/aggregates/user/entities/User';
+import { scoped, Lifecycle, injectable, autoInjectable } from 'tsyringe';
 
 /**
  * Application service responsible for managing conversation lifecycle
  * Handles retrieving, updating, and persisting conversation context
  */
+
+
+@scoped(Lifecycle.ContainerScoped)
+@injectable()
+@autoInjectable()
 export class ConversationService {
   constructor(
     private conversationRepository: ConversationRepository,

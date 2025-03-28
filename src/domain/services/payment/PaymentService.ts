@@ -4,7 +4,12 @@ import { User } from '../../aggregates/user/entities/User';
 import { EventBus } from '../../../shared/events/EventBus';
 import { EventTypes } from '../../../shared/events/EventTypes';
 import { PaymentStatus } from '@prisma/client';
+import { scoped, Lifecycle, injectable, autoInjectable } from 'tsyringe';
 
+
+@scoped(Lifecycle.ContainerScoped)
+@injectable()
+@autoInjectable()
 export class PaymentService {
   constructor(
     private paymentRepository: PaymentRepository,

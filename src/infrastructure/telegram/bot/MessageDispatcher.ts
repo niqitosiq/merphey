@@ -1,14 +1,13 @@
 import TelegramBot from 'node-telegram-bot-api';
-import { TextMessageHandler } from '../handlers/TextMessageHandler';
 import { CommandHandler } from '../handlers/CommandHandler';
 import { PaymentHandler } from '../handlers/PaymentHandler';
-import { MentalHealthApplication } from '../../../application/MentalHealthApplication';
-import { EventBus } from '../../../shared/events/EventBus';
+import { TextMessageHandler } from '../handlers/TextMessageHandler';
 
 /**
  * Dispatches incoming Telegram messages to appropriate handlers
  * Coordinates the flow of messages from the Telegram bot to the application
  */
+
 export class MessageDispatcher {
   /**
    * Creates a new message dispatcher

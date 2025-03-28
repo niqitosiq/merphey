@@ -1,4 +1,5 @@
 import { RiskLevel } from "@prisma/client";
+import { scoped, Lifecycle, injectable, autoInjectable } from "tsyringe";
 
 /**
  * Domain entity representing a risk assessment for a user message

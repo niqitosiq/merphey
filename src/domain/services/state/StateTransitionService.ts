@@ -3,6 +3,7 @@ import { TransitionValidator } from './TransitionValidator';
 import { ConversationContext, StateTransition } from '../../aggregates/conversation/entities/types';
 import { AnalysisResult } from '../analysis/CognitiveAnalysisService';
 import { ConversationState, RiskLevel } from '@prisma/client';
+import { scoped, Lifecycle, injectable, autoInjectable } from 'tsyringe';
 
 interface TransitionAnalysis {
   suggestedState: ConversationState;
@@ -10,6 +11,10 @@ interface TransitionAnalysis {
   confidence: number;
 }
 
+
+@scoped(Lifecycle.ContainerScoped)
+@injectable()
+@autoInjectable()
 export class StateTransitionService {
   constructor(
     private llmService: LLMAdapter,

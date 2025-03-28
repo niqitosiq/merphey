@@ -1,5 +1,6 @@
 import { RiskLevel } from '@prisma/client';
 import { SessionResponse } from '../../domain/aggregates/conversation/entities/types';
+import { scoped, Lifecycle, injectable, autoInjectable } from 'tsyringe';
 
 /**
  * Custom error classes for application-level errors
@@ -82,6 +83,10 @@ export class PlanOperationError extends ApplicationError {
 /**
  * Error handler service for the application
  */
+
+@scoped(Lifecycle.ContainerScoped)
+@injectable()
+@autoInjectable()
 export class ErrorHandler {
   /**
    * Handles errors occurring during message processing

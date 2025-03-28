@@ -1,7 +1,12 @@
 import { PrismaClient, Payment as PrismaPayment, PaymentStatus } from '@prisma/client';
 import { Payment } from '../../../domain/aggregates/user/entities/Payment';
 import { PaymentRepository as PaymentRepositoryPort } from '../../../domain/ports/payment.repository.port';
+import { scoped, Lifecycle, injectable, autoInjectable } from 'tsyringe';
 
+
+@scoped(Lifecycle.ContainerScoped)
+@injectable()
+@autoInjectable()
 export class PaymentRepository implements PaymentRepositoryPort {
   constructor(private prisma: PrismaClient) {}
 

@@ -5,7 +5,12 @@ import { PlanContent, PlanVersion } from '../../aggregates/therapy/entities/Plan
 import { v4 as uuidv4 } from 'uuid';
 import { Message } from '../../aggregates/conversation/entities/Message';
 import { buildPlanRevisionPrompt } from './prompts/planRevision';
+import { scoped, Lifecycle, injectable, autoInjectable } from 'tsyringe';
 
+
+@scoped(Lifecycle.ContainerScoped)
+@injectable()
+@autoInjectable()
 export class PlanEvolutionService {
   private readonly MAX_HISTORY_DEPTH = 40;
 

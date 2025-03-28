@@ -6,7 +6,12 @@ import {
 } from '@prisma/client';
 import { Session } from '../../../domain/aggregates/user/entities/Session';
 import { SessionRepository as SessionRepositoryPort } from '../../../domain/ports/session.repository.port';
+import { scoped, Lifecycle, injectable, autoInjectable } from 'tsyringe';
 
+
+@scoped(Lifecycle.ContainerScoped)
+@injectable()
+@autoInjectable()
 export class SessionRepository implements SessionRepositoryPort {
   constructor(private prisma: PrismaClient) {}
 

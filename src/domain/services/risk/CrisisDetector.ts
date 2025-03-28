@@ -1,3 +1,4 @@
+import { scoped, Lifecycle, injectable, autoInjectable } from 'tsyringe';
 import { LLMAdapter } from '../../../infrastructure/llm/openai/LLMAdapter';
 import { RiskAssessmentError } from '../../../shared/errors/domain-errors';
 
@@ -15,6 +16,9 @@ const HIGH_RISK_PATTERNS = [
   'acute_crisis',
 ];
 
+@scoped(Lifecycle.ContainerScoped)
+@injectable()
+@autoInjectable()
 export class CrisisDetector {
   constructor(private llmService: LLMAdapter) {}
 

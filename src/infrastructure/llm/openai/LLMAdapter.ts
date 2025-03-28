@@ -1,13 +1,21 @@
 import { LlmServiceError } from '../../../shared/errors/application-errors';
 import { LlmPort } from '../../../domain/ports/llm.port';
+import { scoped, Lifecycle, injectable, autoInjectable } from 'tsyringe';
+import { ConfigService } from 'src/domain/services/config/config.service';
 // LlmServiceError
 
 /**
  * OpenRouter API adapter implementation
  * Provides interface to various language models through OpenRouter
  */
+
+@scoped(Lifecycle.ContainerScoped)
+@injectable()
+@autoInjectable()
 export class LLMAdapter implements LlmPort {
   private readonly baseUrl = 'https://openrouter.ai/api/v1';
+  private apiKey:string
+  private defaultModel:string
 
   /**
    * Initializes the OpenRouter client
@@ -15,12 +23,15 @@ export class LLMAdapter implements LlmPort {
    * @param defaultModel - Default model to use (defaults to gpt-4)
    */
   constructor(
-    private readonly apiKey: string,
-    private readonly defaultModel: string = 'gpt-4',
+    private configService: ConfigService,
   ) {
+	const {apiKey,defaultModel} = configService.getConfig('LLMAdapterConfig')
     if (!apiKey) {
       throw new LlmServiceError('API_KEY_REQUIRED', 'OpenRouter API key is required');
     }
+
+	this.apiKey = apiKey,
+	this.defaultModel = defaultModel
   }
 
   /**
