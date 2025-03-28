@@ -1,9 +1,9 @@
 import { RiskAssessment } from '../../aggregates/conversation/entities/RiskAssessment'
-import { RiskLevel } from '../../shared/enums'
 import { LLMAdapter } from '../../../infrastructure/llm/openai/LLMAdapter'
 import { CrisisDetector } from './CrisisDetector'
 import { RiskModel } from './RiskModel'
 import { v4 } from 'uuid'
+import { RiskLevel } from '@prisma/client'
 
 interface SentimentAnalysis {
 	score: number

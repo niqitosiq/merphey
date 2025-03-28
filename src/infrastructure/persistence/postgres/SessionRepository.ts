@@ -85,7 +85,7 @@ export class SessionRepository implements SessionRepositoryPort {
       prismaSession.startTime,
       prismaSession.endTime,
       prismaSession.duration,
-      prismaSession.status as unknown as import('../../../domain/shared/enums').SessionStatus,
+      prismaSession.status,
       prismaSession.createdAt,
       prismaSession.updatedAt,
     );

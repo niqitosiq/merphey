@@ -1,4 +1,4 @@
-import { PaymentStatus } from '../../../../domain/shared/enums';
+import { PaymentStatus } from "@prisma/client";
 
 export class Payment {
   constructor(

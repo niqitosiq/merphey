@@ -1,6 +1,6 @@
 import { UserRepository } from 'src/infrastructure/persistence/postgres/UserRepository';
 import { MentalHealthApplication } from '../../../application/MentalHealthApplication';
-import { ConversationState } from '../../../domain/shared/enums';
+import { ConversationState } from '@prisma/client';
 
 /**
  * Handler for command messages received from Telegram

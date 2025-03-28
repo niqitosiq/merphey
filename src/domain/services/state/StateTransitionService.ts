@@ -1,8 +1,8 @@
-import { ConversationState, RiskLevel } from '../../shared/enums';
 import { LLMAdapter } from '../../../infrastructure/llm/openai/LLMAdapter';
 import { TransitionValidator } from './TransitionValidator';
 import { ConversationContext, StateTransition } from '../../aggregates/conversation/entities/types';
 import { AnalysisResult } from '../analysis/CognitiveAnalysisService';
+import { ConversationState, RiskLevel } from '@prisma/client';
 
 interface TransitionAnalysis {
   suggestedState: ConversationState;

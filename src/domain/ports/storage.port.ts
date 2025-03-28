@@ -1,8 +1,8 @@
 import { ConversationContext } from '../aggregates/conversation/entities/types';
 import { RiskAssessment } from '../aggregates/conversation/entities/RiskAssessment';
 import { TherapeuticPlan } from '../aggregates/therapy/entities/TherapeuticPlan';
-import { ConversationState } from '../shared/enums';
 import { Message } from '../aggregates/conversation/entities/Message';
+import { ConversationState } from '@prisma/client';
 
 /**
  * Interface for conversation storage operations

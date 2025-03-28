@@ -1,28 +1,25 @@
-import { ConversationState, RiskLevel } from '../domain/shared/enums';
-import { SessionService } from '../domain/services/session/SessionService';
-import { ConversationService } from './services/ConversationService';
-import { MessageValidator } from '../shared/utils/safety-filter';
 import { MessageFactory } from '../domain/aggregates/conversation/entities/MessageFactory';
 import { RiskAssessor } from '../domain/services/risk/RiskAssessmentService';
+import { SessionService } from '../domain/services/session/SessionService';
+import { MessageValidator } from '../shared/utils/safety-filter';
+import { ConversationService } from './services/ConversationService';
 
 import { ContextAnalyzer } from '../domain/services/analysis/CognitiveAnalysisService';
 import { StateTransitionService } from '../domain/services/state/StateTransitionService';
 
 import { PlanEvolutionService } from '../domain/services/analysis/PlanEvolutionService';
-import { ProgressTracker } from './services/ProgressTracker';
-import { ResponseComposer } from './services/ProgressTracker';
 import { ErrorHandler } from '../shared/errors/application-errors';
+import { ProgressTracker, ResponseComposer } from './services/ProgressTracker';
 
-import {
-  ConversationContext,
-  SessionResponse,
-  ProcessingResult,
-  TherapeuticResponse,
-} from '../domain/aggregates/conversation/entities/types';
-import { Message } from '../domain/aggregates/conversation/entities/Message';
-import { EventBus } from 'src/shared/events/EventBus';
 import { TherapistService } from 'src/domain/services/analysis/TherapistService';
-import { User } from 'src/domain/aggregates/user/entities/User';
+import { EventBus } from 'src/shared/events/EventBus';
+import { Message } from '../domain/aggregates/conversation/entities/Message';
+import {
+	ConversationContext,
+	ProcessingResult,
+	SessionResponse,
+	TherapeuticResponse,
+} from '../domain/aggregates/conversation/entities/types';
 
 /**
  * Main application class that orchestrates the mental health chatbot workflow

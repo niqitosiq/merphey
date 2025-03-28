@@ -1,9 +1,8 @@
-import { RiskLevel } from '@prisma/client';
+import { ConversationState, RiskLevel } from '@prisma/client';
 import { TherapeuticPlan } from '../../therapy/entities/TherapeuticPlan';
 import { RiskAssessment } from './RiskAssessment';
 import { Message } from './Message';
 import { PlanVersion } from '../../therapy/entities/PlanVersion';
-import { ConversationState } from '../../../../domain/shared/enums';
 
 /**
  * Represents the complete context of a conversation

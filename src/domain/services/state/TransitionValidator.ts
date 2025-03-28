@@ -1,4 +1,4 @@
-import { ConversationState } from '../../shared/enums';
+import { ConversationState } from "@prisma/client";
 
 /**
  * Validates state transitions against allowed state machine paths

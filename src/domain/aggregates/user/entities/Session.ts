@@ -1,4 +1,4 @@
-import { SessionStatus } from '../../../../domain/shared/enums';
+import { SessionStatus } from "@prisma/client";
 
 export class Session {
   constructor(

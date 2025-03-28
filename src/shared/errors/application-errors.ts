@@ -1,5 +1,5 @@
+import { RiskLevel } from '@prisma/client';
 import { SessionResponse } from '../../domain/aggregates/conversation/entities/types';
-import { RiskLevel } from '../../domain/shared/enums';
 
 /**
  * Custom error classes for application-level errors

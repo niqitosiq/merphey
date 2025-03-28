@@ -1,4 +1,4 @@
-import { RiskLevel } from '../../shared/enums';
+import { RiskLevel } from '@prisma/client';
 import { LLMAdapter } from '../../../infrastructure/llm/openai/LLMAdapter';
 import { buildEmergencyPrompt } from './prompts/emergencyResponse';
 

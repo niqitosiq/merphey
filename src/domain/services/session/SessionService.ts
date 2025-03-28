@@ -1,11 +1,11 @@
 import { SessionRepository } from '../../ports/session.repository.port';
 import { Session } from '../../aggregates/user/entities/Session';
 import { User } from '../../aggregates/user/entities/User';
-import { SessionStatus } from '../../shared/enums';
 import { EventBus } from '../../../shared/events/EventBus';
 import { EventTypes } from '../../../shared/events/EventTypes';
 import { UserRepository } from '../../../infrastructure/persistence/postgres/UserRepository';
 import { SessionError } from '../../../shared/errors/domain-errors';
+import { SessionStatus } from '@prisma/client';
 
 export class SessionService {
   constructor(

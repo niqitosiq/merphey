@@ -5,9 +5,9 @@ import {
 import { LLMAdapter } from '../../../infrastructure/llm/openai/LLMAdapter';
 import { Message } from 'src/domain/aggregates/conversation/entities/Message';
 import { PlanVersion } from 'src/domain/aggregates/therapy/entities/PlanVersion';
-import { ConversationState } from '../../shared/enums';
 import { AnalysisResult } from './CognitiveAnalysisService';
 import { buildTherapeuticPrompt } from './prompts/therapeuticResponse';
+import { ConversationState } from '@prisma/client';
 
 /**
  * Domain service for generating therapeutic responses

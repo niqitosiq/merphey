@@ -1,5 +1,5 @@
+import { PaymentStatus } from '@prisma/client';
 import { Payment } from '../aggregates/user/entities/Payment';
-import { PaymentStatus } from '../shared/enums';
 
 export interface PaymentRepository {
   create(

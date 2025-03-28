@@ -1,8 +1,8 @@
 import { ConversationContext } from '../../../../domain/aggregates/conversation/entities/types';
 import { Message } from '../../../../domain/aggregates/conversation/entities/Message';
 import { PlanVersion } from '../../../../domain/aggregates/therapy/entities/PlanVersion';
-import { ConversationState } from '../../../../domain/shared/enums';
 import { AnalysisResult } from '../CognitiveAnalysisService';
+import { ConversationState } from '@prisma/client';
 
 interface TherapeuticResponsePromptData {
   context: ConversationContext;

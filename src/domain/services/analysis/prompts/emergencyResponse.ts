@@ -1,4 +1,4 @@
-import { RiskLevel } from '../../../shared/enums';
+import { RiskLevel } from "@prisma/client";
 
 interface EmergencyPromptData {
   message: string;

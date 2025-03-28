@@ -1,7 +1,6 @@
 import { PrismaClient, Payment as PrismaPayment, PaymentStatus } from '@prisma/client';
 import { Payment } from '../../../domain/aggregates/user/entities/Payment';
 import { PaymentRepository as PaymentRepositoryPort } from '../../../domain/ports/payment.repository.port';
-import { PaymentStatus as DomainPaymentStatus } from '../../../domain/shared/enums';
 
 export class PaymentRepository implements PaymentRepositoryPort {
   constructor(private prisma: PrismaClient) {}
@@ -42,7 +41,7 @@ export class PaymentRepository implements PaymentRepositoryPort {
     return payments.map((payment) => this.mapToDomainModel(payment));
   }
 
-  async updateStatus(paymentId: string, status: DomainPaymentStatus): Promise<Payment> {
+  async updateStatus(paymentId: string, status: PaymentStatus): Promise<Payment> {
     const payment = await this.prisma.payment.update({
       where: { id: paymentId },
       data: {
@@ -59,7 +58,7 @@ export class PaymentRepository implements PaymentRepositoryPort {
       prismaPayment.userId,
       prismaPayment.amount,
       prismaPayment.provider,
-      prismaPayment.status as unknown as DomainPaymentStatus,
+      prismaPayment.status,
       prismaPayment.metadata ? JSON.parse(prismaPayment.metadata as string) : null,
       prismaPayment.createdAt,
       prismaPayment.updatedAt,

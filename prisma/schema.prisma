@@ -1,162 +1,189 @@
 generator client {
-  provider = "prisma-client-js"
+    provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+    provider = "postgresql"
+    url      = env("DATABASE_URL")
 }
 
 enum ConversationState {
-  INFO_GATHERING
-  ACTIVE_GUIDANCE
-  PLAN_REVISION
-  EMERGENCY_INTERVENTION
-  SESSION_CLOSING
+    INFO_GATHERING
+    ACTIVE_GUIDANCE
+    PLAN_REVISION
+    EMERGENCY_INTERVENTION
+    SESSION_CLOSING
 }
 
 enum RiskLevel {
-  LOW
-  MEDIUM
-  HIGH
-  CRITICAL
+    LOW
+    MEDIUM
+    HIGH
+    CRITICAL
 }
 
 enum PaymentStatus {
-  PENDING
-  COMPLETED
-  FAILED
+    PENDING
+    COMPLETED
+    FAILED
 }
 
 enum SessionStatus {
-  ACTIVE
-  COMPLETED
-  EXPIRED
+    ACTIVE
+    COMPLETED
+    EXPIRED
 }
 
 model User {
-  id               String            @id @default(uuid())
-  conversations    Conversation[]
-  therapeuticPlans TherapeuticPlan[]
-  sessions         Session[]
-  balance          Int               @default(1) // Default balance for one free session
-  createdAt        DateTime          @default(now())
-  updatedAt        DateTime          @updatedAt
-  payments         Payment[]
-  telegramId       String?           @unique // Unique Telegram ID for user
+    id String @id @default(uuid())
+
+    balance    Int     @default(1) // Default balance for one free session
+    telegramId String? @unique // Unique Telegram ID for user
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    conversations    Conversation[]
+    therapeuticPlans TherapeuticPlan[]
+    sessions         Session[]
+    payments         Payment[]
 }
 
 model Payment {
-  id        String        @id @default(uuid())
-  userId    String
-  user      User          @relation(fields: [userId], references: [id])
-  amount    Int
-  provider  String        @default("telegram") // Payment provider (e.g., telegram)
-  status    PaymentStatus @default(PENDING)
-  metadata  Json? // Store payment-specific metadata
-  createdAt DateTime      @default(now())
-  updatedAt DateTime      @updatedAt
+    id String @id @default(uuid())
 
-  @@index([userId])
+    userId   String
+    amount   Int
+    provider String @default("telegram") // Payment provider (e.g., telegram)
+    metadata Json? // Store payment-specific metadata
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    status PaymentStatus @default(PENDING)
+    user   User          @relation(fields: [userId], references: [id])
+
+    @@index([userId])
 }
 
 model Session {
-  id               String                   @id @default(uuid())
-  userId           String
-  user             User                     @relation(fields: [userId], references: [id])
-  conversationLogs ConversationSessionLog[] // Session can have multiple conversation interactions
-  startTime        DateTime                 @default(now())
-  endTime          DateTime? // Null if session is still active
-  duration         Int                      @default(30) // Duration in minutes
-  status           SessionStatus            @default(ACTIVE)
-  createdAt        DateTime                 @default(now())
-  updatedAt        DateTime                 @updatedAt
+    id String @id @default(uuid())
 
-  @@index([userId])
+    userId    String
+    startTime DateTime  @default(now())
+    endTime   DateTime? // Null if session is still active
+    duration  Int       @default(30) // Duration in minutes
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    user             User                     @relation(fields: [userId], references: [id])
+    conversationLogs ConversationSessionLog[] // Session can have multiple conversation interactions
+    status           SessionStatus            @default(ACTIVE)
+
+    @@index([userId])
 }
 
 model Conversation {
-  id              String                   @id @default(uuid())
-  state           ConversationState        @default(INFO_GATHERING)
-  userId          String
-  user            User                     @relation(fields: [userId], references: [id])
-  messages        Message[]
-  riskAssessments RiskAssessment[]
-  currentPlanId   String?
-  therapeuticPlan TherapeuticPlan?         @relation(fields: [currentPlanId], references: [id])
-  contextVector   String? // Stored as JSON or vector type
-  sessionLogs     ConversationSessionLog[] // Conversation can span multiple sessions
-  createdAt       DateTime                 @default(now())
-  updatedAt       DateTime                 @updatedAt
+    id String @id @default(uuid())
 
-  @@index([userId])
+    userId        String
+    currentPlanId String?
+    contextVector String? // Stored as JSON or vector type
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    state           ConversationState        @default(INFO_GATHERING)
+    user            User                     @relation(fields: [userId], references: [id])
+    messages        Message[]
+    riskAssessments RiskAssessment[]
+    therapeuticPlan TherapeuticPlan?         @relation(fields: [currentPlanId], references: [id])
+    sessionLogs     ConversationSessionLog[] // Conversation can span multiple sessions
+
+    @@index([userId])
 }
 
 // Join table to track which conversations were active during which sessions
 model ConversationSessionLog {
-  id             String       @id @default(uuid())
-  conversationId String
-  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-  sessionId      String
-  session        Session      @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-  messageCount   Int          @default(0) // Number of messages exchanged during this session
-  createdAt      DateTime     @default(now())
+    id String @id @default(uuid())
 
-  @@unique([conversationId, sessionId])
-  @@index([conversationId])
-  @@index([sessionId])
+    conversationId String
+    sessionId      String
+    messageCount   Int    @default(0) // Number of messages exchanged during this session
+
+    createdAt DateTime @default(now())
+
+    conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+    session      Session      @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+    @@unique([conversationId, sessionId])
+    @@index([conversationId])
+    @@index([sessionId])
 }
 
 model Message {
-  id             String       @id @default(uuid())
-  content        String
-  role           String // 'user' or 'assistant'
-  conversationId String
-  conversation   Conversation @relation(fields: [conversationId], references: [id])
-  metadata       Json? // Store guidance metadata
-  createdAt      DateTime     @default(now())
+    id String @id @default(uuid())
 
-  @@index([conversationId])
+    content        String
+    role           String // 'user' or 'assistant'
+    conversationId String
+    metadata       Json? // Store guidance metadata
+
+    createdAt DateTime @default(now())
+
+    conversation Conversation @relation(fields: [conversationId], references: [id])
+
+    @@index([conversationId])
 }
 
 model RiskAssessment {
-  id             String       @id @default(uuid())
-  level          RiskLevel
-  conversationId String
-  conversation   Conversation @relation(fields: [conversationId], references: [id])
-  factors        String[]
-  score          Float
-  createdAt      DateTime     @default(now())
+    id String @id @default(uuid())
 
-  @@index([conversationId])
+    conversationId String
+    factors        String[]
+    score          Float
+
+    createdAt DateTime @default(now())
+
+    level        RiskLevel
+    conversation Conversation @relation(fields: [conversationId], references: [id])
+
+    @@index([conversationId])
 }
 
 model TherapeuticPlan {
-  id               String         @id @default(uuid())
-  userId           String
-  user             User           @relation(fields: [userId], references: [id])
-  versions         PlanVersion[]  @relation("PlanVersions")
-  currentVersion   PlanVersion?   @relation("CurrentVersion", fields: [currentVersionId], references: [id])
-  currentVersionId String?        @unique
-  createdAt        DateTime       @default(now())
-  updatedAt        DateTime       @updatedAt
-  conversations    Conversation[]
+    id String @id @default(uuid())
 
-  @@index([userId])
+    userId           String
+    currentVersionId String? @unique
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    user           User           @relation(fields: [userId], references: [id])
+    versions       PlanVersion[]  @relation("PlanVersions")
+    currentVersion PlanVersion?   @relation("CurrentVersion", fields: [currentVersionId], references: [id])
+    conversations  Conversation[]
+
+    @@index([userId])
 }
 
 model PlanVersion {
-  id                String           @id @default(uuid())
-  version           Int
-  planId            String
-  therapeuticPlan   TherapeuticPlan  @relation("PlanVersions", fields: [planId], references: [id])
-  previousVersion   PlanVersion?     @relation("VersionChain", fields: [previousVersionId], references: [id])
-  previousVersionId String?
-  nextVersions      PlanVersion[]    @relation("VersionChain")
-  content           Json
-  validationScore   Float?
-  createdAt         DateTime         @default(now())
-  currentOfPlan     TherapeuticPlan? @relation("CurrentVersion")
+    id String @id @default(uuid())
 
-  @@index([planId])
+    version           Int
+    planId            String
+    previousVersionId String?
+    content           Json
+    validationScore   Float?
+
+    createdAt DateTime @default(now())
+
+    currentOfPlan   TherapeuticPlan? @relation("CurrentVersion")
+    therapeuticPlan TherapeuticPlan  @relation("PlanVersions", fields: [planId], references: [id])
+    previousVersion PlanVersion?     @relation("VersionChain", fields: [previousVersionId], references: [id])
+    nextVersions    PlanVersion[]    @relation("VersionChain")
+
+    @@index([planId])
 }

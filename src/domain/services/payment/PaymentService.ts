@@ -1,9 +1,9 @@
 import { PaymentRepository } from '../../ports/payment.repository.port';
 import { Payment } from '../../aggregates/user/entities/Payment';
 import { User } from '../../aggregates/user/entities/User';
-import { PaymentStatus } from '../../shared/enums';
 import { EventBus } from '../../../shared/events/EventBus';
 import { EventTypes } from '../../../shared/events/EventTypes';
+import { PaymentStatus } from '@prisma/client';
 
 export class PaymentService {
   constructor(

@@ -1,7 +1,7 @@
 import {
   PrismaClient,
   ConversationState,
-  RiskLevel as PrismaRiskLevel,
+  RiskLevel,
   Message,
   Conversation as PrismaConversation,
 } from '@prisma/client';
@@ -11,7 +11,6 @@ import {
 } from '../../../domain/aggregates/conversation/entities/types';
 import { RiskAssessment } from '../../../domain/aggregates/conversation/entities/RiskAssessment';
 import { Conversation } from '../../../domain/aggregates/conversation/entities/Conversation';
-import { RiskLevel } from '../../../domain/shared/enums';
 import { ConversationFactory } from '../../../domain/aggregates/conversation/entities/ConversationFactory';
 import { JsonValue } from '@prisma/client/runtime/library';
 
@@ -28,12 +27,6 @@ export class ConversationRepository {
     this.conversationFactory = new ConversationFactory();
   }
 
-  /**
-   * Maps Prisma risk level to domain risk level
-   */
-  private mapPrismaRiskLevel(level: PrismaRiskLevel): RiskLevel {
-    return RiskLevel[level as keyof typeof RiskLevel];
-  }
 
   /**
    * Find the most recent conversation for a user
@@ -84,7 +77,7 @@ export class ConversationRepository {
         (assessment) =>
           new RiskAssessment(
             assessment.id,
-            this.mapPrismaRiskLevel(assessment.level),
+            assessment.level,
             assessment.factors,
             assessment.score,
             assessment.createdAt,
@@ -153,7 +146,7 @@ export class ConversationRepository {
       (record) =>
         new RiskAssessment(
           record.id,
-          this.mapPrismaRiskLevel(record.level),
+          record.level,
           record.factors,
           record.score,
           record.createdAt,
@@ -215,7 +208,7 @@ export class ConversationRepository {
     const record = await this.prisma.riskAssessment.create({
       data: {
         conversationId: data.conversationId,
-        level: data.level as unknown as PrismaRiskLevel,
+        level: data.level,
         factors: data.factors,
         score: data.score,
       },
@@ -234,7 +227,7 @@ export class ConversationRepository {
     await this.prisma.riskAssessment.create({
       data: {
         id: assessment.id,
-        level: PrismaRiskLevel[assessment.level as keyof typeof PrismaRiskLevel],
+        level: assessment.level,
         factors: assessment.factors,
         score: assessment.score,
         conversationId,
@@ -321,7 +314,7 @@ export class ConversationRepository {
         (assessment) =>
           new RiskAssessment(
             assessment.id,
-            this.mapPrismaRiskLevel(assessment.level),
+            assessment.level,
             assessment.factors,
             assessment.score,
             assessment.createdAt,

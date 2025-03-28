@@ -1,4 +1,4 @@
-import { RiskLevel } from '../../../shared/enums';
+import { RiskLevel } from "@prisma/client";
 
 /**
  * Domain entity representing a risk assessment for a user message
