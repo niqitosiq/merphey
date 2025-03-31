@@ -124,6 +124,7 @@ export interface TherapeuticResponse {
    * Therapeutic techniques suggested in the response
    */
   suggestedTechniques?: string[];
+  potentialFutureFocus?: string[];
 }
 
 /**
