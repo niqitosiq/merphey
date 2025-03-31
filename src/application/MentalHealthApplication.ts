@@ -15,10 +15,10 @@ import { TherapistService } from 'src/domain/services/analysis/TherapistService'
 import { EventBus } from 'src/shared/events/EventBus';
 import { Message } from '../domain/aggregates/conversation/entities/Message';
 import {
-	ConversationContext,
-	ProcessingResult,
-	SessionResponse,
-	TherapeuticResponse,
+  ConversationContext,
+  ProcessingResult,
+  SessionResponse,
+  TherapeuticResponse,
 } from '../domain/aggregates/conversation/entities/types';
 
 /**
