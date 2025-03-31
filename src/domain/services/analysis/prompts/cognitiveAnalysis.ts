@@ -32,7 +32,7 @@ export const buildCognitiveAnalysisPrompt = ({
 
   // Get conversation history and insights using utility functions
   const recentHistory = history
-    ? mapMessagesToString(history.slice(-15))
+    ? mapMessagesToString(history.slice(-100))
     : 'No conversation history available';
   const userInsights = history
     ? mapInsightsToString({ history } as ConversationContext)
