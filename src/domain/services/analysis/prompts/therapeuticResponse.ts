@@ -70,7 +70,7 @@ export const buildTherapeuticPrompt = ({
   userLanguage = 'en',
   message,
 }: TherapeuticResponsePromptData): string => {
-  const recentMessages = context.history.slice(-20);
+  const recentMessages = context.history.slice(-100);
   const nextGoal =
     plan?.content.goals?.find((g) => g.codename === analysis.nextGoal) || plan?.content?.goals?.[0];
 

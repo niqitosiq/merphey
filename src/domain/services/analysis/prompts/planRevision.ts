@@ -66,7 +66,8 @@ export const buildPlanRevisionPrompt = ({
   const focus = planContent?.focus || 'No specific focus area';
 
   return `**THERAPEUTIC PLAN REVISION REQUEST**
-  #### **Key User Context:**
+
+#### **Key User Context:**
 - **Current State:** ${contextUpdate.currentState}  
 - **Recent Messages:**  
   ${mapMessagesToString(recentMessages)}  
@@ -84,40 +85,40 @@ export const buildPlanRevisionPrompt = ({
 ${mapCurrentGoalsToString(currentGoals)}  
 
 ---
-
 ### **Instructions for Response:**
-1. Analyze the user's current state and recent messages to identify their immediate needs and long-term progress.  
-2. Update the therapeutic plan to address these needs, ensuring it is tailored to the user's context and history.  
-3. Define clear, actionable goals, each focusing on **a single, specific therapeutic action or intervention**.  
-   - **Important:** Each goal should represent **one discrete step or technique**. Do not include multiple actions or a sequence of steps within a single goal. If a therapeutic intervention involves multiple steps, break it down into separate goals, each with their own conditions and approaches.  
-4. Use the "conditions" field to specify when each goal should be activated. Conditions can be based on:  
-   - User's emotional state (e.g., "user expresses anxiety")  
-   - Specific user statements or keywords (e.g., "user says 'не знаю' more than twice")  
-   - Completion of previous goals (e.g., "after completing timeline_analysis_v2")  
-5. Ensure that the goals form a logical progression or tree, where the outcome of one goal can influence the activation of subsequent goals.  
-6. Provide a detailed approach for each goal, describing how to implement the specific therapeutic action or intervention.  
-7. Include a variety of techniques and approaches to address different aspects of the user's needs.  
-8. Consider the user's risk profile and any identified risk factors when formulating goals and approaches.  
-9. Use evidence-based therapeutic techniques and ensure that the plan aligns with established psychological principles.  
-10. Do not use double quotes inside the JSON strings.  
+1. **Focus on Understanding the User**: Prioritize deeply exploring the user’s character, background, and needs through open-ended questions, active listening, and reflection before suggesting exercises. Leverage the user’s history and insights from past interactions for a personalized experience.  
+2. **Analyze Current State**: Examine recent messages and responses to identify immediate needs and long-term progress. Pay attention to emotional cues and recurring themes.  
+3. **Update the Plan**: Tailor the therapeutic plan to the user’s unique context. Favor dialogue-based goals (e.g., exploring emotions) over exercises, including only a few targeted interventions.  
+4. **Define Goals**: Each goal must focus on **one specific therapeutic action**. Break multi-step interventions into separate goals. Prioritize dialogue over exercises.  
+5. **Flexible Use of Conditions**: Use the "conditions" field to trigger goals and build a dialogue tree. Conditions can depend on:  
+   - Emotional state (e.g., user expresses sadness)  
+   - Specific phrases or keywords (e.g., user says ‘I’m struggling’)  
+   - Completion of prior goals (e.g., after explore_emotions)  
+   - User readiness for deeper dialogue (e.g., user responds in detail to open questions)  
+6. **Logical and Flexible Structure**: Goals should form a progression or tree, where user responses guide the conversation. The plan must adapt to new input dynamically.  
+7. **Detailed Approach**: For each goal, describe how to implement the action, emphasizing ways to show understanding and support (e.g., reflecting the user’s feelings).  
+8. **Variety of Techniques**: Combine dialogue methods, reflection, and minimal exercises, focusing on exploration.  
+9. **Risk Consideration**: Adjust goals based on the risk profile to ensure a safe and supportive approach.  
+10. **Psychological Alignment**: Apply evidence-based techniques suited to a conversational format.  
+11. **Avoid Overload**: Limit exercises—focus on quality dialogue and depth over quantity.  
+12. **No Quotes in JSON**: Avoid double quotes within JSON strings.  
 
 ---
 
 ### **Goals Guidelines:**
-- Each goal should have a clear, specific purpose and focus on **one therapeutic action**.  
-- Conditions should be precise and based on observable user behaviors or statements.  
-- The approach should provide concrete instructions for implementing the therapeutic action.  
-- Goals should be adaptable to the user's responses and progress.  
+- Each goal must have a clear purpose and focus on **one action** (e.g., exploring a topic or a single exercise).  
+- Conditions must be precise, based on observable user behavior or statements.  
+- The approach must provide specific instructions, highlighting support and understanding.  
+- Goals should be flexible, allowing the conversation to evolve naturally.  
 
 #### **Example of a Well-Structured Goal:**
 {
-  "conditions": "user mentions feeling overwhelmed OR user describes a recent panic attack",
-  "codename": "grounding_technique",
-  "state": "ACTIVE_GUIDANCE",
-  "content": "Introduce a grounding exercise to manage acute anxiety",
-  "approach": "Guide the user through a 5-4-3-2-1 grounding technique: Ask them to name 5 things they can see, 4 things they can touch, 3 things they can hear, 2 things they can smell, and 1 thing they can taste. Encourage them to focus on their senses to anchor themselves in the present moment."
+  "conditions": "user expresses uncertainty about feelings OR says ‘I don’t know’ more than once",
+  "codename": "explore_emotions",
+  "state": "INFO_GATHERING",
+  "content": "Explore the user’s emotions through open questions",
+  "approach": "Ask the user how they feel right now and encourage them to elaborate. Use reflection, e.g., ‘It seems like you’re finding it hard to pin down your emotions. What comes to mind?’"
 }
-This example demonstrates a single, focused goal with a clear condition and a specific therapeutic action.
 
 ---
 

@@ -7,7 +7,7 @@ import { Message } from '../../aggregates/conversation/entities/Message';
 import { buildPlanRevisionPrompt } from './prompts/planRevision';
 
 export class PlanEvolutionService {
-  private readonly MAX_HISTORY_DEPTH = 40;
+  private readonly MAX_HISTORY_DEPTH = 1000;
 
   constructor(private readonly llmGateway: LLMAdapter) {}
 
