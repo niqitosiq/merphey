@@ -6,6 +6,7 @@ import {
 import { PlanContent } from 'src/domain/aggregates/therapy/entities/PlanVersion';
 import { TherapeuticPlan } from 'src/domain/aggregates/therapy/entities/TherapeuticPlan';
 import { mapCurrentGoalsToString, mapInsightsToString, mapMessagesToString } from './utils';
+import { ConversationState } from '@prisma/client';
 
 interface PlanRevisionPromptData {
   contextUpdate: ConversationContext;
@@ -33,7 +34,8 @@ export const buildPlanRevisionPrompt = ({
   const techniques = planContent?.techniques?.join(', ') || 'No specific techniques';
   const approach = planContent?.approach || 'No general approach defined';
   const focus = planContent?.focus || 'No specific focus area';
-
+  //  TODO
+  // - **Previous Goals & Outcomes:** ${mapPreviousGoalsToString(previousGoals)}
   return `**THERAPEUTIC PLAN REVISION REQUEST**
 
 #### **Key User Context:**
@@ -46,60 +48,63 @@ export const buildPlanRevisionPrompt = ({
 - **Risk Profile:** ${JSON.stringify(userRiskProfile)}
 
 #### **Therapeutic Plan Context:**
-- **Focus Area:** ${focus}
-- **General Approach:** ${approach}
-- **Techniques:** ${techniques}
-
-#### **Current Goals:**
-${mapCurrentGoalsToString(currentGoals)}
-
----
-### **Deep Synthesis & Conceptualization Instructions (Internal Processing Steps):**
-*Before generating the goals list, perform the following analytical steps based *only* on the provided context:*
-
-1.  **Synthesize Comprehensive User Portrait:** Integrate *all* provided user context (Current State, Messages, Insights, Risk, History implied in messages/insights) into a concise, coherent narrative understanding of the user's current presentation, recurring themes, emotional patterns, and communication style.
-2.  **Generate Hypotheses about Underlying Dynamics:** Based on the synthesized portrait, formulate working hypotheses regarding:
-    *   Potential core beliefs or schemas (about self, others, world).
-    *   Possible unmet needs, hidden motivations, fears, or desires driving behavior.
-    *   Characteristic coping mechanisms (both adaptive and maladaptive).
-    *   Identifiable strengths, skills, or resources.
-    *   Key vulnerabilities or challenge areas.
-3.  **Develop Preliminary Case Conceptualization:** Briefly outline a working model explaining *how* various aspects of the user's experience (thoughts, feelings, behaviors, history, context) might interrelate to produce and maintain the current 'Focus Area'. This formulation should guide the therapeutic direction.
-4.  **Justify Evidence-Based Alignment:** Briefly rationalize *why* the intended 'General Approach' and potential 'Techniques' are appropriate for this specific user, considering their synthesized portrait, hypothesized dynamics, and the preliminary conceptualization. Align with broadly accepted evidence-based principles relevant to the user's likely needs (e.g., principles from CBT, ACT, DBT, psychodynamic approaches, etc., as applicable to a conversational AI context).
+- **Previous Focus Area:** ${focus}
+- **Previous General Approach:** ${approach}
+- **Previous Techniques Used:** ${techniques}
+- **Existing Current Goals:**
+  ${mapCurrentGoalsToString(currentGoals)}
 
 ---
-### **Instructions for Response Generation (Goals & Plan):**
-*Based on the preceding internal synthesis and conceptualization:*
+### **Instructions for Response Generation:**
 
-1.  **Ground Goals in Synthesis**: Ensure *all* proposed 'goals' directly stem from the User Portrait, Hypotheses, and Conceptualization developed above. Prioritize deeply exploring the user’s character, background, and needs *as understood through the synthesis*. Use open-ended questions, active listening, and reflection *before* suggesting exercises. Leverage history and insights for personalization.
-2.  **Analyze Current State Dynamically**: Continuously re-evaluate the user's immediate needs and long-term progress based on the *very latest* messages and responses, refining the conceptualization if necessary. Attend to emotional cues and shifts.
-3.  **Update the Plan Holistically**: Tailor the *entire* therapeutic plan (goals, techniques, approach, focus) based on the comprehensive user understanding derived from the synthesis. Favor dialogue-based goals (e.g., exploring emotions, examining beliefs identified in hypotheses) over exercises. Include only a *few* highly targeted interventions if appropriate.
-4.  **Define Single-Action Goals**: Each goal must focus on **one specific therapeutic action** (e.g., exploring a specific feeling, examining a specific thought pattern, practicing one reflection technique). Break down multi-step interventions into sequential goals. Prioritize dialogue and exploration.
-5.  **Flexible Use of Conditions**: Use the 'conditions' field strategically to trigger goals, creating a responsive dialogue tree. Conditions should reflect the synthesized understanding and hypotheses (e.g., trigger exploration of a core belief if related themes emerge; trigger based on emotional state, keywords, goal completion, or readiness for depth).
-6.  **Logical and Adaptive Structure**: Goals should form a coherent progression or adaptive tree, guided by the conceptualization but flexible enough to respond to the user's emergent needs and responses. The plan *must* adapt dynamically.
-7.  **Detailed Micro-Approach**: For each goal, describe *how* to implement the action, emphasizing concrete ways to demonstrate empathy, validation, and understanding (e.g., "Reflect the user's feeling of X before asking...", "Validate the difficulty related to hypothesized vulnerability Y...").
-8.  **Varied but Focused Techniques**: Combine dialogue methods (Socratic questioning, reflection, validation), exploration, and minimal, targeted exercises, focusing on depth related to the conceptualization. List these in the 'techniques' field.
-9.  **Integrate Risk Considerations**: Explicitly adjust goal content, depth, and pacing based on the 'Risk Profile' and any emergent risk cues, ensuring safety and support. Note relevant risk factors in the 'riskFactors' field.
-10. **Psychological Alignment**: Ensure the *specific application* of techniques aligns with evidence-based principles appropriate for a conversational format and the user's conceptualized needs.
-11. **Avoid Overload**: Focus on quality dialogue and depth over quantity. Limit the number of active goals and avoid suggesting too many exercises at once.
-12. **No Quotes in JSON**: Ensure no double quotes are used within JSON string values.
+**Phase 1: Psychological Synthesis (Internal Analysis - DO NOT include in final JSON output field 'goals', but use to inform them)**
+
+1.  **Synthesize a User Psychological Portrait:** Based *all* available context (history, insights, recent messages, risk profile, past goals), formulate a concise working hypothesis about the user. Include:
+    *   **Core Conflict/Issue:** What seems to be the central struggle? (e.g., fear of intimacy vs desire for connection, perfectionism vs fear of failure).
+    *   **Key Defense Mechanisms/Coping Styles:** How does the user manage difficult emotions or situations? (e.g., intellectualization, avoidance, projection, idealization).
+    *   **Suspected Underlying Needs/Motivations:** What fundamental needs might be driving their behavior/feelings? (e.g., safety, validation, control, autonomy, belonging).
+    *   **Identified Strengths/Resources:** What internal or external factors support the user? (e.g., insight, resilience, support system, past successes).
+    *   **Potential Therapeutic Levers:** What areas seem most promising for exploration or intervention right now? (e.g., exploring the function of a defense, connecting emotion to behavior, examining relationship patterns).
+    *   **Attachment Style Indicators (if applicable):** Any hints towards anxious, avoidant, secure, or disorganized patterns?
+
+**Phase 2: Therapeutic Plan Formulation (Generate the JSON output)**
+
+2.  **Refine Focus and Approach:** Based on the synthesis, define the *updated* therapeutic focus and general approach. Should it shift? Become more specific?
+3.  **Prioritize Understanding & Validation:** Before defining intervention-based goals, prioritize goals focused on deepening the understanding of the user's experience. Use open-ended questions, active listening, reflection, and validation.
+4.  **Analyze Current State & Immediate Needs:** Examine the *latest* message and recent interaction dynamics. What is the most pressing need expressed (explicitly or implicitly)? Is there resistance to address? Confusion to clarify? An emotion to validate?
+5.  **Define Specific, Actionable Goals:**
+    *   Each goal must focus on **one specific therapeutic action** (e.g., "Explore the function of procrastination today", "Validate the feeling of uncertainty", "Gently inquire about the origin of the 'idealized image'"). Break down complex interventions. **Ensure each goal naturally leads to a *single* focal point (e.g., one question, one reflection) in the AI's next response.**
+    *   Prioritize dialogue-based goals (exploration, validation, clarification) over exercises. Include only 1-2 highly targeted exercises *if* the user seems ready and it directly addresses the current focus.
+    *   **Crucially:** Link goals back to the synthesized psychological portrait. *Why* is this goal relevant given the understanding of the user? (This is for the AI's internal logic, reflected in the choice and phrasing of the goal/approach).
+6.  **Use Conditions Flexibly:** Conditions should trigger goals based on:
+    *   User's explicit statements or keywords.
+    *   Expressed emotional states (sadness, frustration, uncertainty).
+    *   *Implicit* cues (e.g., avoidance of a topic, short answers to deep questions, sudden topic shifts).
+    *   Completion of prior exploratory goals.
+    *   User readiness signals (e.g., detailed responses, asking "why").
+7.  **Structure for Logical Flow:** Goals should form a potential path or tree, allowing user responses to guide the conversation naturally. The plan must be adaptable.
+8.  **Detail the Approach:** For each goal, describe *how* to implement the action, emphasizing empathy, validation, and tentative language (e.g., "Gently wonder with the user...", "Reflect the feeling behind the words...", "Offer a possible connection without insisting...").
+9.  **Integrate Techniques Appropriately:** Select evidence-based techniques (e.g., Motivational Interviewing, CFT elements, ACT defusion, psychodynamic exploration hints) that fit a conversational format and align with the synthesis. List them.
+10. **Risk Consideration:** Adjust goal aggressiveness and approach based on the risk profile. Prioritize safety and stabilization if needed.
+11. **Avoid Overload:** Focus on depth over breadth. A few well-chosen, deep goals are better than many superficial ones.
+12. VERY IMPORTANT! **No Quotes in JSON Strings:** Ensure no unescaped double quotes within JSON string values.
 
 ---
 
 ### **Goals Guidelines:**
-- Each goal must have a clear purpose tied to the synthesis/conceptualization and focus on **one action**.
-- Conditions must be precise, based on observable user behavior/statements *or* predicted states based on the conceptualization.
-- The 'approach' description must provide specific micro-instructions, highlighting empathy and validation.
-- Goals should allow the conversation to evolve naturally based on the user's lead, within the conceptual framework.
+- **Purpose:** Focused, single action per goal, **intended to guide a single conversational step.**
+- **Conditions:** Precise, based on explicit or *implicit* user cues.
+- **Approach:** Specific instructions emphasizing validation, exploration, and tentative language. Rooted in the psychological synthesis. **Should guide the AI towards formulating *one* core question or reflection.**
+- **Flexibility:** Allow the conversation to evolve step-by-step.
 
-#### **Example of a Well-Structured Goal (Informed by Hypothetical Synthesis):**
-*(Assuming synthesis suggested user feels inadequate and avoids challenges)*
+#### **Example of a Well-Structured Goal (informed by synthesis):**
+*(Synthesis might indicate user intellectualizes to avoid vulnerability)*
 {
-  "conditions": "user expresses self-criticism OR avoids discussing a recent difficulty mentioned",
-  "codename": "explore_self_criticism_link_to_avoidance",
+  "conditions": "user explains behavior using purely logical terms OR avoids expressing associated feelings",
+  "codename": "connect_logic_to_feeling",
   "state": "INFO_GATHERING",
-  "content": "Gently explore the connection between self-critical thoughts and avoidance behavior",
-  "approach": "Validate the user's expressed feeling first (e.g., 'It sounds like you're being really hard on yourself right now'). Then, reflect the potential pattern identified in synthesis: 'I notice sometimes when these critical thoughts come up, it seems challenging to face X. I wonder if there might be a connection there for you? No pressure to explore it if now isn't the right time.'"
+  "content": "Gently explore the potential feelings underneath the logical explanation",
+  "approach": "Validate the logic first ('That makes a lot of sense from that perspective'). Then, gently inquire about the emotional component: 'I wonder, aside from the logic, what feelings might have been present for you then?' or 'How did that feel in your body?' Use tentative language."
 }
 
 ---
@@ -108,21 +113,23 @@ ${mapCurrentGoalsToString(currentGoals)}
 {
   "goals": [
     {
-      "conditions": "Specific conditions for activating this goal",
+      "conditions": "Specific conditions for activating this goal (consider implicit cues)",
       "codename": "unique_identifier",
-      "state": "INFO_GATHERING/ACTIVE_GUIDANCE/etc.",
-      "content": "Goal description",
-      "approach": "Detailed instructions for a single therapeutic action grounded in synthesis"
+      "state": "${Object.values(ConversationState)
+        .map((s) => s.toUpperCase())
+        .join(' | ')}",
+      "content": "Goal description (single, specific action)",
+      "approach": "Detailed instructions for the action, emphasizing empathy, validation, and linkage to synthesis"
     }
     // ... other goals
   ],
-  "techniques": ["list of techniques planned based on synthesis"],
-  "approach": "Overall conversation approach informed by conceptualization",
-  "focus": "Current therapeutic focus, potentially refined by synthesis",
-  "riskFactors": ["identified risk factors to monitor"],
+  "techniques": ["list", "of", "evidence-based", "techniques", "selected"],
+  "approach": "Overall refined conversation approach based on synthesis",
+  "focus": "Updated therapeutic focus based on synthesis",
+  "riskFactors": ["identified or updated risk factors"],
   "metrics": {
-    "completedGoals": ["list past achieved goals"],
-    "progress": "brief assessment of progress based on recent interaction and synthesis"
+    "completedGoals": ["list of achieved goal codenames"],
+    "progress": "Qualitative assessment of progress based on synthesis and recent interaction"
   }
 }`;
 };

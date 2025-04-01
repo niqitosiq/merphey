@@ -25,7 +25,7 @@ export interface SessionResponse {
   /**
    * The therapeutic message to display to the user
    */
-  message: string;
+  messages: string[];
 
   /**
    * Additional metadata for UI display and tracking
@@ -109,7 +109,7 @@ export interface TherapeuticResponse {
   /**
    * The actual text content to send to user
    */
-  content: string;
+  content: string[];
 
   /**
    * Analysis insights derived during response generation

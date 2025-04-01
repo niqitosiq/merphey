@@ -27,7 +27,7 @@ export class ApplicationError extends Error {
    */
   toSessionResponse(): SessionResponse {
     return {
-      message: 'I apologize, but I encountered an issue. Please try again in a moment.',
+      messages: ['I apologize, but I encountered an issue. Please try again in a moment.'],
     };
   }
 }
@@ -128,7 +128,7 @@ export class ErrorHandler {
 
     // Generic error response
     return {
-      message: 'I apologize, but something went wrong. Please try again later.',
+      messages: ['I apologize, but something went wrong. Please try again later.'],
     };
   }
 
@@ -143,7 +143,7 @@ export class ErrorHandler {
     }
 
     return {
-      message: 'I encountered an unexpected issue. Please try again.',
+      messages: ['I encountered an unexpected issue. Please try again.'],
       metadata: {
         state: 'SESSION_CLOSING',
         riskLevel: RiskLevel.LOW,

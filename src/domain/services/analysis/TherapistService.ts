@@ -91,22 +91,27 @@ export class TherapistService {
    * Provides a safe fallback response when normal generation fails
    */
   private getFallbackResponse(state: ConversationState): TherapeuticResponse {
-    const fallbackContent: Record<ConversationState, string> = {
-      [ConversationState.INFO_GATHERING]:
+    const fallbackContent: Record<ConversationState, string[]> = {
+      [ConversationState.INFO_GATHERING]: [
         "I understand you're sharing something important. Could you tell me more about how that affected you?",
-      [ConversationState.ACTIVE_GUIDANCE]:
+      ],
+      [ConversationState.ACTIVE_GUIDANCE]: [
         "I hear what you're saying. Let's take a moment to reflect on this together. How do you feel about this situation now?",
-      [ConversationState.PLAN_REVISION]:
+      ],
+      [ConversationState.PLAN_REVISION]: [
         "Your progress is important. Let's consider what's been working well and what might need adjustment.",
-      [ConversationState.EMERGENCY_INTERVENTION]:
+      ],
+      [ConversationState.EMERGENCY_INTERVENTION]: [
         "I'm here with you right now. Let's focus on what might help you feel safer in this moment.",
-      [ConversationState.SESSION_CLOSING]:
+      ],
+      [ConversationState.SESSION_CLOSING]: [
         "Thank you for sharing your thoughts today. Would it help to summarize what we've discussed?",
+      ],
     };
 
-    const content =
-      fallbackContent[state] ||
-      "I'm here to listen and support you. Would you like to continue our conversation?";
+    const content = fallbackContent[state] || [
+      "I'm here to listen and support you. Would you like to continue our conversation?",
+    ];
 
     return {
       content,

@@ -77,8 +77,8 @@ export class CommandHandler {
   private async getExtraCreditsForCoolGuys(userId: string): Promise<string> {
     try {
       // Add extra credits to user's account
-      await this.userRepository.incrementBalance(userId, 1);
-      return 'Вы получили 1 дополнительный кредит! 🎉';
+      await this.userRepository.incrementBalance(userId, 10);
+      return 'Вы получили 10 дополнительных кредитов! 🎉';
     } catch (error) {
       console.error(`Error adding extra credits for ${userId}:`, error);
       return 'Не удалось добавить кредиты. Пожалуйста, попробуйте позже.';

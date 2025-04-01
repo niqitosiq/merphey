@@ -277,7 +277,7 @@ export class ResponseComposer {
     context: ConversationContext,
   ): SessionResponse {
     return {
-      message: processingResult.therapeuticResponse.content,
+      messages: processingResult.therapeuticResponse.content,
       metadata: {
         state: context.currentState,
         riskLevel: processingResult.riskAssessment.level,

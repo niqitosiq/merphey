@@ -58,7 +58,7 @@ export class TextMessageHandler {
         userId,
         sanitizedMessage,
       );
-      messages.push(this.formatResponse(response));
+      messages.push(...this.formatResponse(response));
 
       return messages;
     } catch (error) {
@@ -96,9 +96,9 @@ export class TextMessageHandler {
    * @param response - Application response object
    * @returns string - Formatted response text
    */
-  private formatResponse(response: SessionResponse): string {
+  private formatResponse(response: SessionResponse): string[] {
     // Basic formatting - in a real app, this would be more sophisticated
-    let formattedResponse = response.message;
+    let formattedResponse = response.messages;
 
     return formattedResponse;
   }

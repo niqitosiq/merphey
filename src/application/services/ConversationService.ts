@@ -207,19 +207,19 @@ export class ConversationService {
         metadata: userMessage.metadata as Metadata,
       });
 
-      console.log(JSON.stringify(savedUserMessage), 'savedUserMessage');
-
-      const assistantMessage = await this.conversationRepository.saveMessage({
-        conversationId: context.conversationId,
-        content: processingResult.therapeuticResponse.content,
-        role: 'assistant',
-        metadata: {
-          suggestedTechniques: processingResult.therapeuticResponse.suggestedTechniques || [],
-          insights: processingResult.therapeuticResponse.insights || {},
-        },
-      });
-
-      console.log(JSON.stringify(assistantMessage), 'assistantMessage');
+      const assistantMessages = await Promise.all(
+        processingResult.therapeuticResponse.content.map(async (message: string) => {
+          return this.conversationRepository.saveMessage({
+            conversationId: context.conversationId,
+            content: message,
+            role: 'assistant',
+            metadata: {
+              suggestedTechniques: processingResult.therapeuticResponse.suggestedTechniques || [],
+              insights: processingResult.therapeuticResponse.insights || {},
+            },
+          });
+        }),
+      );
 
       if (processingResult.stateTransition.from !== processingResult.stateTransition.to) {
         await this.conversationRepository.updateState(
@@ -267,27 +267,10 @@ export class ConversationService {
       const updatedHistory = [
         ...context.history,
         convertToUserMessage(savedUserMessage),
-        convertToUserMessage({
-          ...assistantMessage,
-          metadata: {
-            suggestedTechniques: processingResult.therapeuticResponse.suggestedTechniques || [],
-            insights: processingResult.therapeuticResponse.insights || {},
-          },
-        }),
+        ...assistantMessages.map(convertToUserMessage),
       ];
 
       const updatedRiskHistory = [...context.riskHistory, riskAssessment];
-
-      // const newContextVector = this.contextLoader.buildContextVector(
-      //   updatedHistory,
-      //   updatedRiskHistory,
-      //   processingResult.stateTransition.to,
-      // );
-
-      // await this.conversationRepository.updateContextVector(
-      //   context.conversationId,
-      //   newContextVector,
-      // );
 
       return {
         conversationId: context.conversationId,
@@ -315,7 +298,7 @@ export class ConversationService {
     context: ConversationContext,
   ): SessionResponse {
     return {
-      message: processingResult.therapeuticResponse.content,
+      messages: processingResult.therapeuticResponse.content,
       metadata: {
         state: context.currentState,
         riskLevel: processingResult.riskAssessment.level as unknown as RiskLevel,
